@@ -1,0 +1,172 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{4E88783A-0B5A-4D57-A23A-97BBB9CC1E9E}</ProjectGuid>
+    <RootNamespace>KalRTPC</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectName>AnaRTPC</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)\$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(Configuration)\$(ProjectName)\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</LinkIncremental>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(Configuration)\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
+    <CustomBuildAfterTargets Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Build</CustomBuildAfterTargets>
+    <CustomBuildBeforeTargets Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Link</CustomBuildBeforeTargets>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <AdditionalOptions>/EHs %(AdditionalOptions)</AdditionalOptions>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>./;../include;include;C:\root\include;C:\CLHEP-2.1.0.1_VC10\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <DisableSpecificWarnings>4305;4267;4800;4244;4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <PreLinkEvent>
+      <Command>
+      </Command>
+    </PreLinkEvent>
+    <Link>
+      <AdditionalOptions>/LIBPATH:"$(OutDir)" $(ProjectName)For.lib /LIBPATH:"C:\FORTRAN\G77\lib"  libg2c.a  libgcc.a %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>libAfterImage.lib;libASImage.lib;libASImageGui.lib;libCint.lib;libCintex.lib;libCore.lib;libdequeDict.lib;libEG.lib;libEGPythia6.lib;libEve.lib;libFFTW.lib;libFitPanel.lib;libFoam.lib;libfreetype.lib;libFTGL.lib;libFumili.lib;libGdml.lib;libGed.lib;libGeom.lib;libGeomBuilder.lib;libGeomPainter.lib;libGpad.lib;libGraf.lib;libGraf3d.lib;libGui.lib;libGuiBld.lib;libGuiHtml.lib;libHbook.lib;libHist.lib;libHistPainter.lib;libHtml.lib;liblistDict.lib;libmap2Dict.lib;libmapDict.lib;libMathCore.lib;libMathMore.lib;libMatrix.lib;libMinuit.lib;libMinuit2.lib;libMLP.lib;libmultimap2Dict.lib;libmultimapDict.lib;libmultisetDict.lib;libNet.lib;libNetx.lib;libOracle.lib;libpcre.lib;libPhysics.lib;libPostscript.lib;libProof.lib;libProofDraw.lib;libProofPlayer.lib;libProofx.lib;libPyROOT.lib;libQtGSI.lib;libQuadp.lib;libRCastor.lib;libReflex.lib;libReflexDict.lib;libRFIO.lib;libRGL.lib;libRint.lib;libRIO.lib;libRMySQL.lib;libRODBC.lib;libRooFit.lib;libRooFitCore.lib;libRootAuth.lib;libSessionViewer.lib;libsetDict.lib;libSmatrix.lib;libSpectrum.lib;libSpectrumPainter.lib;libSPlot.lib;libTable.lib;libThread.lib;libTMVA.lib;libTree.lib;libTreePlayer.lib;libTreeViewer.lib;libUnuran.lib;libvectorDict.lib;libVMC.lib;libWin32gdk.lib;libXMLIO.lib;libXMLParser.lib;libXrdProofd.lib;CLHEP.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\root\lib;C:\root\bin;C:\CLHEP-2.1.0.1_VC10\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <RandomizedBaseAddress>
+      </RandomizedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+    <CustomBuildStep>
+      <Command>ar.exe  -r  $(OutDir)\$(ProjectName)For.lib  $(IntDir)\FortranLib\*.o</Command>
+      <Outputs>$(OutDir)\$(ProjectName)For.lib</Outputs>
+      <Message>creating fortran lib file $(OutDir)\$(ProjectName)For.lib</Message>
+      <Inputs>$(IntDir)\FortranLib\hallbfield.o;$(IntDir)\FortranLib\rwfthl.o;$(IntDir)\FortranLib\targetfield.o;%(Inputs)</Inputs>
+    </CustomBuildStep>
+    <CustomBuild>
+      <Command>C:\FORTRAN\G77\bin\g77.exe -c ..\src\%(Filename).f -fno-second-underscore -fno-leading-underscore -o $(IntDir)\FortranLib\%(Filename).o </Command>
+      <Outputs>$(IntDir)\FortranLib\%(Filename).o</Outputs>
+      <Message>Compiling fortran code %(FileName).f to create $(IntDir)\FortranLib\%(Filename).o</Message>
+    </CustomBuild>
+    <CustomBuild />
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\ACCTools.cc" />
+    <ClCompile Include="..\src\AnaRTPC.cc" />
+    <ClCompile Include="..\src\ApplyMulDPolN.cc" />
+    <ClCompile Include="..\src\BonusHelixFit.cc" />
+    <ClCompile Include="..\src\Calib.cc" />
+    <ClCompile Include="..\src\config.cc" />
+    <ClCompile Include="..\src\DeltaXXX.cc" />
+    <ClCompile Include="..\src\DriftEMagboltz.cc" />
+    <ClCompile Include="..\src\EPC_c.cc" />
+    <ClCompile Include="..\src\GlobalDebuger.cc" />
+    <ClCompile Include="..\src\Main.cc" />
+    <ClCompile Include="..\src\MulDFit.cc" />
+    <ClCompile Include="..\src\PlotRes.cc" />
+    <ClCompile Include="..\src\RTPCPhys.cc" />
+    <ClCompile Include="..\src\rwfthc.cc" />
+    <ClCompile Include="..\src\track0.cc" />
+    <ClCompile Include="..\src\track1.cc" />
+    <ClCompile Include="..\src\track2.cc" />
+    <ClCompile Include="..\src\WISER_c.cc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\include\EPC_c.hh" />
+    <None Include="..\include\RTPC_Calib_Para.inc" />
+    <None Include="..\include\WISER_c.hh" />
+    <None Include="..\Makefile" />
+    <CustomBuild Include="..\src\rwfthl.f">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <None Include="..\src\BonusHelixFit.hh" />
+    <None Include="..\src\DriftEMagboltz.hh" />
+    <CustomBuild Include="..\src\epc.f">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <None Include="..\src\GlobalDebuger.hh" />
+    <CustomBuild Include="..\src\wiser.f">
+      <FileType>Document</FileType>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\MyStyle.h" />
+    <ClInclude Include="..\src\ACCTools.h" />
+    <ClInclude Include="..\src\ApplyMulDPolN.h" />
+    <ClInclude Include="..\src\config.h" />
+    <ClInclude Include="..\src\MulDFit.h" />
+    <ClInclude Include="..\src\track0.h" />
+    <ClInclude Include="..\src\track1.h" />
+    <ClInclude Include="..\src\track2.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

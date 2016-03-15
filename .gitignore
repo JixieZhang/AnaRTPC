@@ -12,6 +12,7 @@
 *.so
 *.dylib
 *.dll
+*.so.*
 
 # Fortran module files
 *.mod
@@ -26,3 +27,11 @@
 *.exe
 *.out
 *.app
+
+#vc10 files
+*.suo
+*.user
+
+# dirs
+Debug
+obj.x86_64
