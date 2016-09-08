@@ -12,7 +12,7 @@ using namespace std;
 
 #include "MulDFit.h"
 
-void AnaRTPC(const char *infile,const char *outfile="", int readoutpad=2);
+void AnaRTPC(const char *infile,const char *outfile="", int readoutpad=2, int ntrack_per_event=1);
 
 void DeltaXXX(const char* infile,const char* vipcut="",
 			  const char* cutname="Pall", const char* treename="ep");
@@ -34,17 +34,20 @@ int main(int argc, char** argv)
 		cout<<"       readoutpad: 1)4.5x5,  2)2x2,  3)compass 2-D readout, 0.4x0.4 equivalent"<<endl;
 		cout<<"       4)compass 2-D readout, 1.0x1.0 equivalent, 5cm drift distance,"<<endl;
 		cout<<"       5)compass 2-D readout, 1.0x1.0 equivalent, 4cm drift distance, "<<endl;
-		cout<<"       6) Sebastian's: 2.8x4 pad and 4cm drift distance configuration."<<endl;
+		cout<<"       6)Final Configuration: 2.8x4 pad and 4cm drift distance."<<endl;
 		cout<<"       job=11  AnaRTPC, will create tree and files for MulDFit"<<endl;
 		cout<<"       job=12  Get RTPC Calibration input file RTPC_Calib_Para.inc"<<endl;
 		cout<<"       job=13  Plot Delta figures for RTPC"<<endl;
 		cout<<"       job=14  Plot dEdX(PID) figures for RTPC\n"<<endl;
+		cout<<"       job=18  AnaRTPC, create super event tree, combine 25 events in to one super event by \n"
+		    <<"               shifting their hits"<<endl;
 		cout<<"       job=99  Do all 11, 12, 13 and 14 jobs"<<endl;
 		cout<<"example: "<<endl
 		    <<"       "<<argv[0]<<" 11  ../allz.root  nt_allz.root 3"<<endl
 		    <<"       "<<argv[0]<<" 12  ../allz.root  nt_allz.root "<<endl
 		    <<"       "<<argv[0]<<" 13  ../allz.root  nt_allz.root "<<endl
 		    <<"       "<<argv[0]<<" 14  ../allz.root  nt_allz.root "<<endl
+		    <<"       "<<argv[0]<<" 18  ../allz.root  nt_allz.root "<<endl
 		    <<"       "<<argv[0]<<" 99  ../allz.root  nt_allz.root "<<endl
 			<<endl;
 		cout<<"\nFor 20<=job<=29:"<<endl;
@@ -92,7 +95,7 @@ int main(int argc, char** argv)
 	}
 
 	SetMyFitStyle();
-	if(job==11 || job==99) {AnaRTPC(infile,outfile,readoutpad);}
+	if(job==11 || job==99) {AnaRTPC(infile,outfile,readoutpad,1);}
 	if(job==12 || job==99) Calib(outfile);
 	if(job==13 || job==99) 
 	{
@@ -103,6 +106,7 @@ int main(int argc, char** argv)
 		DeltaXXX(outfile,"Z0>90 && Z0<110","Z+100");
 		DeltaXXX(outfile,"Z0>-110 && Z0<-90","Z-100");
 	}
+	if(job==18) {AnaRTPC(infile,outfile,readoutpad,25);}
 	if(job==14 || job==99) PlotPid(outfile);
 
 	if(job==20)

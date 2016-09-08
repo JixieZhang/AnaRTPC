@@ -47,8 +47,12 @@ public:
   //        tdc = (t_s2gem1+toff)/NS_PER_TIC+tzero
   int DriftESim(float x0,float y0,float z0,float deltaE,
 		float& x_r,float& y_r,float& z_r,int& chan,int& tdc,int& adc);
-
-  //input:
+  
+  //input: id and tdc in tic unit
+  //output: (x_r,y_r,z_r) from look up table
+  void LookupXYZByIDTDC(int chan,int tdc,float& x_r,float& y_r,float& z_r);
+    
+    //input:
   //Initial position x0,y0,z0 (in mm) and deltaE (in KeV)
   //output: chan,adc,tdc (in tic unit)
   //        tdc = (t_s2gem1+toff)/NS_PER_TIC+tzero

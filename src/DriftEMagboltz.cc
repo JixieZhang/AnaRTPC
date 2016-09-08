@@ -339,6 +339,7 @@ int DriftEMagboltz::DriftEl2Pad(float x0,float y0,float z0,float deltaE,
   //output////////////////////////////////////////////////////////////////
   //let z_pad=z0, ignore the motoin on z irection
   chan=GetChanId(z0,phi_rad);
+  if(chan<0) return chan;
   //if chan=-1 it means this channel is unreconstrutable
   tdc=int(t_s2pad/NS_PER_TIC+TPC_TZERO);
   adc=int(Kev2ADC*deltaE);
@@ -468,6 +469,20 @@ void DriftEMagboltz::InitElPathCell()
 #endif
 
 }//end InitElPathCell
+
+//////////////////////////////////////////////////////////////////////////////////////
+//input: id and tdc in tic unit
+//output: (x_r,y_r,z_r) from look up table
+void DriftEMagboltz::LookupXYZByIDTDC(int chan,int tdc,
+			      float& x_r,float& y_r,float& z_r)
+{
+  x_r=y_r=z_r=0.0;
+  if(tdc<0) return;
+  //get (x_r, y_r, z_r) from vector rawXYZ
+  x_r=this->rawXYZ[tdc][chan].x;
+  y_r=this->rawXYZ[tdc][chan].y;
+  z_r=this->rawXYZ[tdc][chan].z;  
+}
 
 //////////////////////////////////////////////////////////////////////////////////////
 //input: (x0,y0,z0) in mm and deltaE in KeV

@@ -201,8 +201,13 @@ const char *GetBaseName(const char* str)
   return basename.c_str();
 }
 
-
-void AnaRTPC(const char *infile="nt.root", const char *outfile="nt_ep.root", int padtype=2)
+//By Jixie: if ntrack_per_event>1, will shift TDC of each track by some TDC value
+//The total drift time of one track is about 34 TDC tics
+//In each event, there will be about 25 tracks, one half early tracks and 
+//one half late tracks. The time of each track should be shifted by 
+//ramdon number 1,2,...n, where n = 34/((25-1)/2)
+void AnaRTPC(const char *infile="nt.root", const char *outfile="nt_ep.root", 
+  int padtype=2, int ntrack_per_event=25)
 {
   ////////////////////////////////////////////////////////
   TFile *InFile = TFile::Open(infile);
@@ -285,6 +290,7 @@ void AnaRTPC(const char *infile="nt.root", const char *outfile="nt_ep.root", int
   int     StepID[MaxHit];
   int     StepTDC[MaxHit];
   int     StepADC[MaxHit];
+  int     ShiftTDC=0;
 
   double  StepX_rec[MaxHit];
   double  StepY_rec[MaxHit];
@@ -387,7 +393,7 @@ void AnaRTPC(const char *infile="nt.root", const char *outfile="nt_ep.root", int
   TH2F *h2Thre_A= new TH2F("h2Thre_A","Barely Reach 1st GEM Foil;#theta-90 (deg);P (MeV/c)",
     180,-90,90,200,50,250);
 
-  TTree *pTree=new TTree("ep","tagged DIS events");     
+  TTree *pTree=new TTree("ep","RTPC12 ep events");     
 
   //////////////////////////////////////////////////////////////////////
   pTree->Branch("ThrownIndex",&ThrownIndex,"ThrownIndex/I"); 
@@ -461,6 +467,7 @@ void AnaRTPC(const char *infile="nt.root", const char *outfile="nt_ep.root", int
   pTree->Branch("StepID",&StepID[0],"StepID[HitNum]/I");
   pTree->Branch("StepTDC",&StepTDC[0],"StepTDC[HitNum]/I");
   pTree->Branch("StepADC",&StepADC[0],"StepADC[HitNum]/I");
+  pTree->Branch("ShiftTDC",&ShiftTDC,"ShiftTDC/I");
 
   pTree->Branch("StepX_rec",&StepX_rec[0],"StepX_rec[HitNum]/D");
   pTree->Branch("StepY_rec",&StepY_rec[0],"StepY_rec[HitNum]/D");
@@ -545,7 +552,7 @@ void AnaRTPC(const char *infile="nt.root", const char *outfile="nt_ep.root", int
   //foutZ.setf(ios::scientific,ios::floatfield);
   //////////////////////////////////////////////////////////////////////
 
-  Index=0;
+  Index=0; 
   Long64_t nentries = Proton->fChain->GetEntriesFast();
   Long64_t nb0 = 0, nb1 = 0;
   for (Long64_t i=0; i<nentries;i++) 
@@ -597,6 +604,20 @@ void AnaRTPC(const char *infile="nt.root", const char *outfile="nt_ep.root", int
     Thetavb_p=Proton->Thetavb;
     Phivb_p=Proton->Phivb;
 
+      
+    //by jixie: now I want to shift some tracks to create super events
+    if(ntrack_per_event>1) 
+    {
+      int tmpN = int(ceil(34.0 * 2.0 / ntrack_per_event)); 
+      int tmpShift = rand() % tmpN + 1;  
+
+      int tureTrackIndex = int(ntrack_per_event/2.0);
+      if( (Index%ntrack_per_event)==tureTrackIndex ) ShiftTDC = 0;
+      else ShiftTDC = -34 + (Index%ntrack_per_event) * 2.0 * 34/ntrack_per_event + tmpShift;
+      if(ShiftTDC>33) ShiftTDC=33;
+      cout<<"Index="<<Index<<"   shiftTDC="<<ShiftTDC<<endl;
+    }
+
     Smin=9999.;Smax=-9999.;
     HitNum=0;
     double SumBz=0, SumdEdX=0;
@@ -626,6 +647,7 @@ void AnaRTPC(const char *infile="nt.root", const char *outfile="nt_ep.root", int
 	if(!bUseMagboltz)
 	{
 	  //Now mimic the digitization and reconstruction of RTPC track
+	  //by smearing real hit location
 	  double tmpS_rec = tmpS + fGaus(0,pResS_p);
 	  double tmpPhi_rec = tmpPhi + fGaus(0,pResPh_p);
 	  double tmpZ_rec = StepZ[HitNum] + fGaus(0,pResZ_p);
@@ -644,6 +666,15 @@ void AnaRTPC(const char *infile="nt.root", const char *outfile="nt_ep.root", int
 	  float xo=0,yo=0,zo=0;
 	  int chan=-1,tdc=-1,adc=-1;
 	  gEsim->DriftESim(xi,yi,zi,dE,xo,yo,zo,chan,tdc,adc);
+	  
+	  //by jixie: now I want to shift some tracks to create super events
+          if(chan>0 && ntrack_per_event>1) 
+	  {
+	    tdc += ShiftTDC;
+	    gEsim->LookupXYZByIDTDC(chan,tdc,xo,yo,zo);
+	    double tmpSS = sqrt(xo*xo+yo*yo);
+	    if(tmpSS<RTPC_Cathode_R || tmpSS>RTPC_Anode_R) continue;
+	  }
 
 	  StepID[HitNum]=chan;
 	  StepTDC[HitNum]=tdc;

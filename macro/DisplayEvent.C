@@ -151,8 +151,13 @@ int  DisplayEvent( int entry=0, TCut extracut="")
   TTree *ep=(TTree*) gROOT->FindObject("ep");
 
 
-  int iEvent = (entry>0) ? entry : ++thisevent;
+  int iEvent = (entry>0) ? entry : thisevent++;
 
+  if(iEvent>= ep->GetEntries()) {
+    cout<<"Reach the end of root file...\n";
+    return -1;
+  }
+  
   char strcut[255]; sprintf(strcut,"Index==%d",iEvent);
   char strDCcut[255]; sprintf(strDCcut,"Index==%d && StepS>=30 && StepS<=80 && abs(StepZ)<210",iEvent);
 
@@ -185,35 +190,35 @@ int  DisplayEvent( int entry=0, TCut extracut="")
   pt->AddText(Form("NHits=%d",NHits));
   h2yxframe->SetTitle(Form("Event %d: y-x", iEvent));
 
-
-  if(gROOT->FindObject("gryx")) delete gROOT->FindObject("gryx");
-  if(gROOT->FindObject("gryz")) delete gROOT->FindObject("gryz");
-  if(gROOT->FindObject("grxz")) delete gROOT->FindObject("grxz");
-  if(gROOT->FindObject("grrz")) delete gROOT->FindObject("grrz");
+  TObject *obj=0;
+  if(obj=gROOT->FindObject("gryx")) delete obj;
+  if(obj=gROOT->FindObject("gryz")) delete obj;
+  if(obj=gROOT->FindObject("grxz")) delete obj;
+  if(obj=gROOT->FindObject("grrz")) delete obj;
 
   c1->Clear();
   //Get the TGraph object, in one canvas there can be only one 
   c1->cd(); h2yxframe->Draw();
    if(!gROOT->IsBatch()) h2yxframe->Draw("same");
-  ep->Draw("StepY:StepX>>h2yx",DCcut,"same");
+  ep->Draw("StepY:StepX",DCcut,"same");
   TGraph *gryx=(TGraph*)(gROOT->FindObject("Graph")->Clone("gryx"));
   gryx->SetName("gryx");
   gryx->SetMarkerColor(4);gryx->SetMarkerStyle(4);
 
   c1->cd(); h2yzframe->Draw();
-  ep->Draw("StepY:StepZ>>gryz",DCcut,"same");
+  ep->Draw("StepY:StepZ",DCcut,"same");
   TGraph *gryz=(TGraph*)(gROOT->FindObject("Graph")->Clone("gryz"));
   gryz->SetName("gryz");
   gryz->SetMarkerColor(4);gryz->SetMarkerStyle(4);
 
   c1->cd(); h2xzframe->Draw();
-  ep->Draw("StepX:StepZ>>grxz",DCcut,"same");
+  ep->Draw("StepX:StepZ",DCcut,"same");
   TGraph *grxz=(TGraph*)(gROOT->FindObject("Graph")->Clone("grxz"));
   grxz->SetName("grxz");
   grxz->SetMarkerColor(4);grxz->SetMarkerStyle(4);
 		
   c1->cd(); h2rzframe->Draw();
-  ep->Draw("StepS:StepZ>>grrz",DCcut,"same");
+  ep->Draw("StepS:StepZ",DCcut,"same");
   TGraph *grrz=(TGraph*)(gROOT->FindObject("Graph")->Clone("grrz"));
   grrz->SetName("grrz");
   grrz->SetMarkerColor(4);grrz->SetMarkerStyle(4);
@@ -252,17 +257,19 @@ int  DisplayEvent( int entry=0, TCut extracut="")
 
 //slice show n events, each last for specified second
 //if istart<=0, start from current events, otherwise from specified event
-void go(int n=1,int second=5, int istart=0)
+void go(int n=1,int second=2, int istart=0)
 { 
-  if(istart<=0)  istart=thisevent;
+  if(istart>0)  thisevent=istart;
   for(int i=0;i<n;i++)
     {
       int nHits = 0;
       while (nHits==0) 
 	{
-	  nHits = DisplayEvent(istart);
+	  nHits = DisplayEvent(thisevent++);
+	  if(nHits == -1) break;
 	}
       c1->Update();
+      if(nHits == -1) break;
       gSystem->Sleep(second*1000);
     }
 
@@ -274,24 +281,27 @@ void DisplayMyEvent(TCut cut="abs(sqrt(A_sim*A_sim+B_sim*B_sim)-R_sim)>1.0")
   while (nHits==0) 
     {
       nHits = DisplayEvent(0,cut);
+      if(nHits == -1) break;
     }
   c1->Update();
 }
 
 //slice show n events, each last for specified second
 //if istart<=0, start from current events, otherwise from specified event
-void SliceShowMyEvent(int n=1, int second=5, int istart=0, 
+void SliceShowMyEvent(int n=1, int second=2, int istart=0, 
 		      TCut cut="abs(sqrt(A_sim*A_sim+B_sim*B_sim)-R_sim)<5.0")
 { 
-  if(istart<=0)  istart=thisevent;
+  if(istart>0)  thisevent=istart;
   for(int i=0;i<n;i++)
     {
       int nHits = 0;
       while (nHits==0) 
 	{
-	  nHits = DisplayEvent(istart,cut);
+	  nHits = DisplayEvent(thisevent++,cut);
+	  if(nHits == -1) break;
 	}
       c1->Update();
+      if(nHits == -1) break;
       gSystem->Sleep(second*1000);
 
     }
