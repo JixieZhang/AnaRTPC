@@ -554,3 +554,112 @@ s0=%.1f > %.1f(first gem) or |z0|=%.1f > %.1f\n",
 }
 
 
+//////////////////////////////////////////////////////////////////////////////////////
+//input: (x0,y0,z0) in mm and deltaE in KeV
+//One input position will create NofTIC of TDC: TDC_1st, TDC_2nd, TDC_3nd
+//where TDC_2nd=TDC_1st - 1 TDC_3nd=TDC_2st - 1
+//output: (x_r,y_r,z_r) and tdc in tic unit
+int DriftEMagboltz::DriftESim(float x0,float y0,float z0,float deltaE,int &NofTIC,
+		float *x_r,float* y_r,float* z_r,int* chan,int* tdc,int* adc)
+{
+  //Suggested mumner of output tic for each ionization
+  //the wave form is about 380 ns
+  NofTIC = 380.0/NS_PER_TIC + 1;
+  if(NofTIC>3) NofTIC=3;
+  
+  //reset the values 
+  for(int t=0;t<NofTIC;t++) {
+    chan[t]=-10;  
+    tdc[t]=adc[t]=-1;
+    x_r[t]=y_r[t]=z_r[t]=0.; 
+  }
+
+  float s0=sqrt(x0*x0+y0*y0);	//x0,y0,z0 in mm unit
+
+  if( s0>PAD_S-10.0 || fabs(z0) > RTPC_L/2.+PAD_L )
+    {
+#ifdef DRIFTESIM_DEBUG
+      if( DRIFTESIM_DEBUG>=1 )
+	{
+	  printf("Magboltz:This inonized electron is out of Drift Volumn!!! \
+s0=%.1f > %.1f(first gem) or |z0|=%.1f > %.1f\n",
+		 s0,PAD_S-10.0,z0,RTPC_L/2.+PAD_L);
+	}
+#endif
+
+      for(int t=0;t<NofTIC;t++) chan[t]=-2;
+      return -2;
+    }
+
+#ifdef DRIFTESIM_DEBUG
+  if( DRIFTESIM_DEBUG>=1 )
+    {
+      float phi0_rad=atan2(y0,x0);
+      if( phi0_rad<0. ) phi0_rad+=2.0*PI;
+      printf("\nDriftESim(x0=%.2f,y0=%.2f,z0=%.2f)",x0,y0,z0);
+      printf(" ==> (r0,phi0_deg,z0)=(%.2f,%.2f,%.2f)\n",s0, phi0_rad*rad2deg,z0);
+    }
+#endif
+
+  //please note that the tdc is on tic unit
+  int status=DriftEl2Pad( x0, y0, z0, deltaE, chan[0], tdc[0], adc[0]);
+  if ( status<0 ) return status; 
+
+  // dead region or unreconstructable
+  if ( chan[0]<0 || chan[0]>=NUM_PADS || tdc[0]>=NAL_SAMP || tdc[0]<0 ) return -1;
+
+  //Now determine how many reconstructed hit you might have
+  //and determine how to distribute the ADC between them
+  if (NofTIC > tdc[0] + 1) NofTIC = tdc[0] + 1;
+
+  if (NofTIC>1 && adc[0]<3) NofTIC = 1;
+  if (NofTIC>2 && adc[0]<7) NofTIC = 2;
+
+  if (NofTIC == 2) 
+  {//now split the energy by 1:2
+    adc[1] = int(adc[0]*2.0/3.0);
+    adc[0] -= adc[1];
+    tdc[1]=tdc[0]-1;
+    chan[1]=chan[0];
+  }
+  else if (NofTIC == 3) 
+  {//now split the energy by 2:4:1
+    adc[2] = int(adc[0]*1.0/7.0);
+    adc[1] = int(adc[1]*4.0/3.0);
+    adc[0] -= (adc[1] + adc[2]);
+    tdc[2]=tdc[0]-2;
+    tdc[1]=tdc[0]-1;
+    chan[2]=chan[1]=chan[0];
+  }
+
+  //get (x_r, y_r, z_r) from vector rawXYZ
+  for(int t=0;t<NofTIC;t++) 
+  {
+    x_r[t]=this->rawXYZ[tdc[t]][chan[t]].x;
+    y_r[t]=this->rawXYZ[tdc[t]][chan[t]].y;
+    z_r[t]=this->rawXYZ[tdc[t]][chan[t]].z;
+  }
+
+
+#if defined DRIFTESIM_DEBUG 
+  if ( DRIFTESIM_DEBUG>=1 )  
+  {
+    float r_r, phi_r_rad, ds, dphi;
+    float phi0_rad = atan2(y0,x0);
+    if( phi0_rad<0. ) phi0_rad+=2.0*PI;
+    printf("DriftESim(Jixie)==>Final output: %d points:\n",NofTIC);
+    for(int t=0;t<NofTIC;t++) 
+    {
+      r_r=sqrt(x_r[t]*x_r[t]+y_r[t]*y_r[t]);
+      ds=sqrt(x0*x0+y0*y0)-r_r;
+      phi_r_rad=atan2(y_r[t],x_r[t]);
+      if( phi_r_rad<0. ) phi_r_rad+=2.0*PI;
+      dphi=(phi0_rad-phi_r_rad)*rad2deg;
+      printf("\t %d: tdc=%d (x_r,y_r,z_r)=(%.2f,%.2f,%.2f) -->(r,phi_deg,z)=(%.2f,%.2f,%.2f); dS=%.2f, dPhi=%.2f\n",
+	t,tdc[t],x_r[t],y_r[t],z_r[t],r_r,phi_r_rad*rad2deg,z_r[t],ds,dphi);
+    }
+  }
+#endif
+
+  return NofTIC;
+}

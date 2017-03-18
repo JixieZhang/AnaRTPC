@@ -236,7 +236,12 @@ C      IF(ABS(GG0).LT.(1.0/HH0)) HH0=1.0/GG0
         ASYM   = BET*XF(I)-ALF*YF(I)
         SS0(I) =1.0
         IF(ASYM.LT.0.0) SS0(I)=-1.0
-        FF0   = OME*(RF(I)*RF(I)-DD0*DD0)/(2.0*RF(I)*GG0) + DD0/RF(I)
+C By jixie: if rf[i] == 0, there is a problem on ff0. 
+	IF(RF(I).EQ.0.0) THEN
+	  FF0 = 0.0
+	ELSE
+          FF0 = OME*(RF(I)*RF(I)-DD0*DD0)/(2.0*RF(I)*GG0) + DD0/RF(I)
+	ENDIF
 C
         IF(FF0.LT.-1.0) FF0 = -1.0
         IF(FF0.GT.1.0)  FF0 = 1.0

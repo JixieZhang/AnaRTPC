@@ -1,7 +1,6 @@
-//this script is used to plot dx for RCS, e-p and pi0
-//1)It will load 2 root files then fill 3 histograms
-//2)Normalize histogram to charge
-//3) add them together then plot it 
+//this script is used to fit pol7 to 2-D histo of 
+//dPt(or dTh,dPh) vs Pt, Th, Ph
+//for RTPC calibration
 #include <fstream>
 #include <iostream>
 #include <stdio.h>

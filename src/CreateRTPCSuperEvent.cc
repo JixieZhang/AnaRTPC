@@ -43,173 +43,50 @@ using namespace std;
 #define Store_Rec_Leaves 1
 
 //#define RTPC_BoNuS6 1
+//the following have been defined in AnaRTPC
+extern double RTPC_Cathode_R; // = 30;		//mm
+extern double RTPC_Anode_R; //   = 80;		//mm
+extern double RTPC_ReadOut_R; // = 90;		//mm
+extern double RTPC_TDC_Window; //= 25;		//ns
+extern double RTPC_Pad_Z; // = 5.0;		//mm
+extern double RTPC_Pad_W; // = 4.5;		//mm
+extern double RTPC_Length; // = 400;            //mm  
 
-double RTPC_Cathode_R = 30;		//mm
-double RTPC_Anode_R   = 80;		//mm
-double RTPC_ReadOut_R = 90;		//mm
-double RTPC_TDC_Window= 25;		//ns
-double RTPC_Pad_Z = 5.0;		//mm
-double RTPC_Pad_W = 4.5;		//mm
-double RTPC_Length = 400;               //mm  
-
-DriftEMagboltz *gEsim;
+extern DriftEMagboltz *gEsim;
 
 //estimate number of channel: assuming 30 degree missing in phi coverage 
 // Row# = int(2*PI*Readout_R/RTPC_Pad_W)
 // Col# = int(RTPC_Length/RTPC_Pad_Z)
-int GetNofCh(int padtype)
-{
-  const double PI=asin(1.0)*2;
-  int iRow = int(ceil(2*PI*RTPC_ReadOut_R/RTPC_Pad_W * 350./360.));
-  int iCol = int(ceil(RTPC_Length/RTPC_Pad_Z));
-  int N = iRow * iCol;
-  if(padtype==3)
-  {
-    int iRow_zstrip = int(ceil(2*PI*RTPC_ReadOut_R/0.4 * 350./360.));
-    int iCol_zstrip = int(ceil(RTPC_Length/20.0));
-    int N_zstrip = iRow_zstrip*iCol_zstrip;
-
-    int iRow_phistrip = int(ceil(2*PI*RTPC_ReadOut_R/20.0 * 350./360.));
-    int iCol_phistrip = int(ceil(RTPC_Length/0.4));
-    int N_phistrip = iRow_phistrip*iCol_phistrip;
-    N = N_zstrip + N_phistrip;
-  }
-  else if(padtype==4 || padtype==5)
-  {
-    int iRow_zstrip = int(ceil(2*PI*RTPC_ReadOut_R/1.0 * 350./360.));
-    int iCol_zstrip = int(ceil(RTPC_Length/20.0));
-    int N_zstrip = iRow_zstrip*iCol_zstrip;
-
-    int iRow_phistrip = int(ceil(2*PI*RTPC_ReadOut_R/20.0 * 350./360.));
-    int iCol_phistrip = int(ceil(RTPC_Length/1.0));
-    int N_phistrip = iRow_phistrip*iCol_phistrip;
-    N = N_zstrip + N_phistrip;
-  }
-  cout<<"GetNofCh(padtype="<<padtype<<") return "<<N<<endl;
-  return N;
-}
+extern int GetNofCh(int padtype);
 
 //config pad size:  
 //padtype = 1)4.5x5,  2) 2x2  3) compass 2-D readout, 0.4x0.4 equivalent
 //4)compass 2-D readout, 1x20,1 x 1 mm equivalent, 5) 2.5x4 mm,Sebastian's
-void ConfigPadSize(int padtype)
-{
-  //the following will be used to estimate RTPC resolution and fiting
-#if defined RTPC_BoNuS6
-  RTPC_Cathode_R = 30;		//mm
-  RTPC_Anode_R   = 60;		//mm
-  RTPC_ReadOut_R = 70;		//mm
-  RTPC_TDC_Window= 114;		//ns
-  RTPC_Pad_Z = 5.0;		//mm
-  RTPC_Pad_W = 4.5;		//mm
-  RTPC_Length = 200;		//mm
-#else
-  RTPC_Cathode_R  = 30;		//mm
-  RTPC_Anode_R    = 80;		//mm
-  RTPC_ReadOut_R  = 90;		//mm
-  RTPC_TDC_Window = 200;	//ns
-  RTPC_Length = 400;		//mm
+extern void ConfigPadSize(int padtype);
 
-  if(padtype == 1)
-  {
-    RTPC_Pad_Z = 5.0;		//mm
-    RTPC_Pad_W = 4.5;		//mm
-  }
-  else if(padtype == 2)
-  {
-    RTPC_Pad_Z = 2.0;		//mm
-    RTPC_Pad_W = 2.0;		//mm
-  }
-  else if(padtype == 3)
-  {
-    //20mm x 0.4mm z-strip and 0.4mm x 20mm phi-strip
-    RTPC_Pad_Z = 0.4;		//mm
-    RTPC_Pad_W = 0.4;		//mm
-  }
-  else if(padtype == 4)
-  {
-    //20mm x 1mm z-strip and 1mm x 20mm phi-strip
-    RTPC_Pad_Z = 1.0;		//mm
-    RTPC_Pad_W = 1.0;		//mm
-  }
-  else if(padtype == 5)
-  {
-    //20mm x 1mm z-strip and 1mm x 20mm phi-strip
-    RTPC_Pad_Z = 1.0;		//mm
-    RTPC_Pad_W = 1.0;		//mm
-    RTPC_Pad_Z = 20.0;		//mm
-    RTPC_Pad_W = 20.0;		//mm
-    RTPC_Anode_R    = 70;	//mm
-    RTPC_ReadOut_R  = 80;	//mm
-  }
-  else if(padtype == 6)
-  {
-    RTPC_Pad_Z = 4.0;		//mm
-    RTPC_Pad_W = 2.8;		//mm
-    RTPC_Anode_R    = 70;	//mm
-    RTPC_ReadOut_R  = 80;	//mm
-  }
-#endif
-  GetNofCh(padtype);
-}
 static track0 *Proton=0;
 static track1 *Electron=0;
 static config *Config=0;
 
 //boxmuller gauss number generator
 //input: mean m, standard deviation s 
-double fGaus(double m, double s);
-void PrintAcc(TH3F *h3,TH3F *h3N, int Nmin=0, int TCS=0);
+extern double fGaus(double m, double s);
+extern void PrintAcc(TH3F *h3,TH3F *h3N, int Nmin=0, int TCS=0);
 
-int FitATrack(int StepNum, double StepX[],double StepY[],double StepZ[],
+extern int FitATrack(int StepNum, double StepX[],double StepY[],double StepZ[],
   double &R, double &A, double &B,
   double &Phi_deg, double &Theta_deg, double &Z,
   double RLimit_l=30.1, double RLimit_h=79.9);
 
-void RTPC_Recon(double MeanBz, double R_rec, double Theta_rec, double Phi_rec,
+extern void RTPC_Recon(double MeanBz, double R_rec, double Theta_rec, double Phi_rec,
   double &P_corr, double &Theta_corr, double &Phi_corr);
 
-const char *GetFileName(const char* str)
-{
-  const char *name = strrchr(str,'/');
-  //printf ("\"%s\": Last occurence of '/' found at %d \n",str,int(name-str+1));
-  if(name==NULL) name=&str[0];
-  else name++; 	
-  return name;
-}
+extern const char *GetFileName(const char* str);
+
+extern const char *GetBaseName(const char* str);
 
 
-const char *GetBaseName(const char* str)
-{
-  const char *name = strrchr(str,'/');
-  if(name==NULL) name=&str[0];
-  else name++; 	
-  //printf ("\"%s\": Last occurence of '/' found at %d, name=%s\n",str,int(name-str),name);
-
-  const char *surfix = strrchr(name,'.');	
-  if(surfix==NULL)  surfix=&name[sizeof(name)];
-  //printf ("\"%s\": Last occurence of '.' found at %d \n",name,int(surfix-name+1));
-
-  int length = surfix-name;
-  //this method have a memory leakage
-  //char *basename = new char[length+1];	
-  //strncpy(basename,name,length);basename[length]='\0';
-  //printf("basename=%s\n",basename);
-  //return basename;
-
-  //I am using string to avoid memory leakage
-  string basename;
-  basename.append(name,length); 
-  //printf("basename=%s\n",basename.c_str());
-  return basename.c_str();
-}
-
-//By Jixie: if ntrack_per_event>1, will shift TDC of each track by some TDC value
-//The total drift time of one track is about 34 TDC tics
-//In each event, there will be about 25 tracks, one half early tracks and 
-//one half late tracks. The time of each track should be shifted by 
-//ramdon number 1,2,...n, where n = 34/((25-1)/2)
-void AnaRTPC(const char *infile="nt.root", const char *outfile="nt_ep.root", 
+void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_ep.root", 
   int padtype=2, int ntrack_per_event=25)
 {
   ////////////////////////////////////////////////////////
@@ -400,7 +277,7 @@ void AnaRTPC(const char *infile="nt.root", const char *outfile="nt_ep.root",
   TH2F *h2Thre_A= new TH2F("h2Thre_A","Barely Reach 1st GEM Foil;#theta-90 (deg);P (MeV/c)",
     180,-90,90,200,50,250);
 
-  TTree *pTree=new TTree("ep","RTPC12 ep events");     
+  TTree *pTree=new TTree("ep","tagged DIS events");     
 
   //////////////////////////////////////////////////////////////////////
   pTree->Branch("ThrownIndex",&ThrownIndex,"ThrownIndex/I"); 
@@ -487,7 +364,7 @@ void AnaRTPC(const char *infile="nt.root", const char *outfile="nt_ep.root",
   pTree->Branch("StepID_rec",&StepID_rec[0],"StepID_rec[HitNum_rec]/I");
   pTree->Branch("StepTDC_rec",&StepTDC_rec[0],"StepTDC_rec[HitNum_rec]/I");
   pTree->Branch("StepADC_rec",&StepADC_rec[0],"StepADC_rec[HitNum_rec]/I");
-#endif
+#endif 
 
   pTree->Branch("R_sim",&R_sim,"R_sim/D");			
   pTree->Branch("A_sim",&A_sim,"A_sim/D");
@@ -569,11 +446,11 @@ void AnaRTPC(const char *infile="nt.root", const char *outfile="nt_ep.root",
   //foutZ.setf(ios::scientific,ios::floatfield);
   //////////////////////////////////////////////////////////////////////
 
-  Index=0; 
+  Index=0;
   Long64_t nentries = Proton->fChain->GetEntriesFast();
   Long64_t nb0 = 0, nb1 = 0;
   for (Long64_t i=0; i<nentries;i++) 
-    //for (Long64_t i=0; i<2;i++) 
+    //for (Long64_t i=0; i<5;i++) 
   {
     if(!((i+1)%1000))
       printf("processing event %6d / %6d \r",int(i+1),int(nentries));

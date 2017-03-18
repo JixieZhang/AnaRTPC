@@ -1,7 +1,5 @@
-//this script is used to plot dx for RCS, e-p and pi0
-//1)It will load 2 root files then fill 3 histograms
-//2)Normalize histogram to charge
-//3) add them together then plot it 
+//this script is used to plot resolutions as a function of
+//other variables
 #include "stdlib.h"
 #include <iostream>
 #include "math.h"

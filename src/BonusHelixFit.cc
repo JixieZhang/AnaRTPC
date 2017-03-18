@@ -161,7 +161,7 @@ void helix_fit(int PointNum,double szPos[][3], double& Rho, double& A, double& B
   npt=PointNum;
   if(fit_track_to_beamline)
   {
-    rf[npt]= 0.0;
+    rf[npt]= 0.0001;
     pf[npt]= 0.0;
     zf[npt]= 0.0; 
     wfi[npt]= 1.0;

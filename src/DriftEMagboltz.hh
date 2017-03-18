@@ -48,6 +48,18 @@ public:
   int DriftESim(float x0,float y0,float z0,float deltaE,
 		float& x_r,float& y_r,float& z_r,int& chan,int& tdc,int& adc);
   
+  //This routine will be used by simulation
+  //One input position will create NofTIC of TDC: TDC_1st, TDC_2nd, TDC_3nd
+  //where TDC_2nd=TDC_1st - 1 TDC_3nd=TDC_2st - 1
+  //input:
+  //Initial position x0,y0,z0 (in mm) and deltaE (in KeV)
+  //        NofTIC is one ionization to how many tic, 
+  //output: x_r,y_r,z_r,chan,adc,tdc (in tic unit)
+  //        tdc = (t_s2gem1+toff)/NS_PER_TIC+tzero
+  //return NofTIC
+  int DriftESim(float x0,float y0,float z0,float deltaE, int& NofTIC,
+		float *x_r,float* y_r,float* z_r,int* chan,int* tdc,int* adc);
+
   //input: id and tdc in tic unit
   //output: (x_r,y_r,z_r) from look up table
   void LookupXYZByIDTDC(int chan,int tdc,float& x_r,float& y_r,float& z_r);

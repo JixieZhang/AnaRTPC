@@ -28,7 +28,7 @@ MODE     := -m32
 GPPFLAGS := -M
 CXX      := g++
 FF       := g77
-CXXFLAGS := -Wall -O3 -g -Wno-deprecated  $(MODE) -I$(INCDIR) $(OTHERINC) 
+CXXFLAGS := -Wall -O3 -g -Wno-write-strings -Wno-deprecated  $(MODE) -I$(INCDIR) $(OTHERINC) 
 CFLAGS   := -Wall -O3 -g  $(MODE) -I$(INCDIR) $(OTHERINC) 
 FFLAGS   := -Wall -O3 -g  $(MODE) -I$(INCDIR) $(OTHERINC) 
 LD       := g++
@@ -44,7 +44,7 @@ FF       := gfortran
 
 GPPFLAGS := -M
 CXX      := g++
-CXXFLAGS := -Wall -O3 -g -Wno-deprecated  $(MODE) -I$(INCDIR) $(OTHERINC) 
+CXXFLAGS := -Wall -O3 -g -Wno-write-strings -Wno-deprecated  $(MODE) -I$(INCDIR) $(OTHERINC) 
 CFLAGS   := -Wall -O3 -g  $(MODE) -I$(INCDIR) $(OTHERINC) 
 FFLAGS   := -Wall -O3 -g  $(MODE) -I$(INCDIR) $(OTHERINC) 
 LD       := g++
