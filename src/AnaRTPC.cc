@@ -569,11 +569,12 @@ void AnaRTPC(const char *infile="nt.root", const char *outfile="nt_ep.root",
   //foutZ.setf(ios::scientific,ios::floatfield);
   //////////////////////////////////////////////////////////////////////
 
-  Index=0; 
+  Index=0;
+  int pFoundGoodTrackInSuperEvent = 0;
   Long64_t nentries = Proton->fChain->GetEntriesFast();
   Long64_t nb0 = 0, nb1 = 0;
   for (Long64_t i=0; i<nentries;i++) 
-    //for (Long64_t i=0; i<2;i++) 
+    //for (Long64_t i=0; i<5;i++) 
   {
     if(!((i+1)%1000))
       printf("processing event %6d / %6d \r",int(i+1),int(nentries));
@@ -625,6 +626,7 @@ void AnaRTPC(const char *infile="nt.root", const char *outfile="nt_ep.root",
     //by jixie: now I want to shift some tracks to create super events
     //one half will be shifted as 'early' the other half will be shifted 'late'
     //the ShiftTDC will be uniformly distributed within [1, pMaxTDC-1] 
+    if(!(Index%ntrack_per_event)) pFoundGoodTrackInSuperEvent = 0;
     if(ntrack_per_event>1) 
     { 
       //maximum TDC value
@@ -634,11 +636,16 @@ void AnaRTPC(const char *infile="nt.root", const char *outfile="nt_ep.root",
       //how many extra TIC this track should be shifted? a value between 1 and tmpN, 
       int tmpShift = rand() % int(ceil(tmpN)) + 1; 
 
-      int tureTrackIndex = int(ntrack_per_event/2.0);
-      if( (Index%ntrack_per_event)==tureTrackIndex ) ShiftTDC = 0;
+      int tureTrackIndex = int(ntrack_per_event/2.0) ;
+      if((Index%ntrack_per_event)>=tureTrackIndex && Proton->StepNum>30 && 
+	Proton->StepTL[Proton->StepNum-1]>RTPC_Anode_R-10.0 && !pFoundGoodTrackInSuperEvent ) 
+      {
+	ShiftTDC = 0;
+	pFoundGoodTrackInSuperEvent = 1;
+      }
       else ShiftTDC = -pMaxTDC + int((Index%ntrack_per_event) * tmpN) + tmpShift;
       if(ShiftTDC>pMaxTDC-1) ShiftTDC=pMaxTDC-1;
-      cout<<"Index="<<Index<<"   shiftTDC="<<ShiftTDC<<endl;
+      cout<<"ThrownIndex="<<ThrownIndex<<"  Index="<<Index<<"  shiftTDC="<<ShiftTDC<<endl;
     }
 
     Smin=9999.;Smax=-9999.;
@@ -652,7 +659,7 @@ void AnaRTPC(const char *infile="nt.root", const char *outfile="nt_ep.root",
       if(tmpS>RTPC_Cathode_R && tmpS<RTPC_Anode_R)
       {
 	if(Smin>tmpS) Smin=tmpS;
-	if(Smax<tmpS) Smax=tmpS;
+	else if(Smax<tmpS) Smax=tmpS;
 
 	SumBz += Proton->StepBz[ss];
 	if(Proton->StepL[ss]) SumdEdX += Proton->StepdE[ss]/Proton->StepL[ss];
@@ -702,11 +709,11 @@ void AnaRTPC(const char *infile="nt.root", const char *outfile="nt_ep.root",
 	    //by jixie: now I want to shift some tracks to create super events
 	    if(ntrack_per_event>1) 
 	    {
-	      tdc[t] += ShiftTDC;
-	      if(tdc[t]<0 || tdc[t]>=NAL_SAMP) continue;
+	      tdc[t] += ShiftTDC*NS_PER_TIC;
+	      if(tdc[t]<0) continue;
 	      gEsim->LookupXYZByIDTDC(chan[t],tdc[t],xo[t],yo[t],zo[t]);
 	      double tmpSS = sqrt(xo[t]*xo[t]+yo[t]*yo[t]);
-	      if(tmpSS<RTPC_Cathode_R || tmpSS>RTPC_Anode_R) continue;
+	      if(tmpSS<RTPC_Cathode_R-10.0 || tmpSS>RTPC_Anode_R+10.0) continue;
 	    }
 
 	    StepID_rec[HitNum_rec]=chan[t];

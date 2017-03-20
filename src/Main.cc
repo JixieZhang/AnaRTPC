@@ -41,7 +41,7 @@ int main(int argc, char** argv)
     cout<<"       job=12  Get RTPC Calibration input file RTPC_Calib_Para.inc"<<endl;
     cout<<"       job=13  Plot Delta figures for RTPC"<<endl;
     cout<<"       job=14  Plot dEdX(PID) figures for RTPC\n"<<endl;
-    cout<<"       job=18  AnaRTPC, create super event tree, combine 25 events in to one super event by \\ \n"
+    cout<<"       job=18  AnaRTPC, create super event tree, combine ntrack in to one super event by \\ \n"
         <<"               shifting their hits"<<endl;
     cout<<"       job=99  Do all 11, 12, 13 and 14 jobs"<<endl;
     cout<<"example: "<<endl
@@ -71,7 +71,7 @@ int main(int argc, char** argv)
     exit(-1);
   }
 
-  int job=11, readoutpad=6;
+  int job=11, readoutpad=6,ntrack_per_event=1;
   char infile[255], outfile[255];
   char label='A';
   int orderA=5, orderB=5, orderC=5, orderD=5, orderE=5;
@@ -83,6 +83,7 @@ int main(int argc, char** argv)
     if(argc>3) sprintf(outfile,"%s",argv[3]);
     else sprintf(outfile,"%s","nt_ep.root");
     if(argc>4) readoutpad=atoi(argv[4]);
+    if(argc>5) ntrack_per_event=atoi(argv[5]);
   }
   if(job>=20 && job<29)
   {
@@ -97,7 +98,7 @@ int main(int argc, char** argv)
   }
 
   SetMyFitStyle();
-  if(job==11 || job==99) {AnaRTPC(infile,outfile,readoutpad,1);}
+  if(job==11 || job==99) {AnaRTPC(infile,outfile,readoutpad,ntrack_per_event);}
   if(job==12 || job==99) Calib(outfile);
   if(job==13 || job==99) 
   {
@@ -108,7 +109,7 @@ int main(int argc, char** argv)
     DeltaXXX(outfile,"Z0>90 && Z0<110","Z+100");
     DeltaXXX(outfile,"Z0>-110 && Z0<-90","Z-100");
   }
-  if(job==18) {AnaRTPC(infile,outfile,readoutpad,25);}
+  if(job==18) {AnaRTPC(infile,outfile,readoutpad,ntrack_per_event);}
   if(job==14 || job==99) PlotPid(outfile);
 
   if(job==20)
