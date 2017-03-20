@@ -159,7 +159,7 @@ int  DisplayEvent( int entry=0, TCut extracut="", int ntrack=25)
   }
   
   char strcut[255]; sprintf(strcut,"Index==%d",iEvent);
-  char strDCcut[255]; sprintf(strDCcut,"Index==%d && StepS>=30 && StepS<=80 && abs(StepZ)<210",iEvent);
+  char strDCcut[255]; sprintf(strDCcut,"Index==%d && HitNum>2",iEvent);
 
   TCut cut = strcut;
   TCut DCcut = strDCcut;

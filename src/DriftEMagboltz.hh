@@ -11,7 +11,7 @@ using namespace std;
 
 #define NS_PER_TIC 200    // nano-seconds per tic
 #define NUM_PADS 18000    // Number of actual pads 
-#define NAL_SAMP 60       // Number of tic samples 
+#define NAL_SAMP 55       // Number of tic samples 
 
 
 static const double PI=4.0*atan(1.0);

@@ -574,7 +574,7 @@ void AnaRTPC(const char *infile="nt.root", const char *outfile="nt_ep.root",
   Long64_t nentries = Proton->fChain->GetEntriesFast();
   Long64_t nb0 = 0, nb1 = 0;
   for (Long64_t i=0; i<nentries;i++) 
-    //for (Long64_t i=0; i<5;i++) 
+  //for (Long64_t i=0; i<5;i++) 
   {
     if(!((i+1)%1000))
       printf("processing event %6d / %6d \r",int(i+1),int(nentries));
@@ -709,7 +709,7 @@ void AnaRTPC(const char *infile="nt.root", const char *outfile="nt_ep.root",
 	    //by jixie: now I want to shift some tracks to create super events
 	    if(ntrack_per_event>1) 
 	    {
-	      tdc[t] += ShiftTDC*NS_PER_TIC;
+	      tdc[t] += int(ShiftTDC*NS_PER_TIC);
 	      if(tdc[t]<0) continue;
 	      gEsim->LookupXYZByIDTDC(chan[t],tdc[t],xo[t],yo[t],zo[t]);
 	      double tmpSS = sqrt(xo[t]*xo[t]+yo[t]*yo[t]);

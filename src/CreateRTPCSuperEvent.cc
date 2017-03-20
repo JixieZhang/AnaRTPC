@@ -766,7 +766,7 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
     ///////////////////////////////////////////////
 
     //if(HitNum>5 && DCA_sim<0.2) {pTree->Fill(); Index++;}
-    pTree->Fill(); 
+    pTree->Fill(); Index++;
     /////////////////////////////////////////////////////////////
 
     //reset

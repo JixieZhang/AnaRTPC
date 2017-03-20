@@ -41,9 +41,12 @@ DriftEMagboltz::DriftEMagboltz(float R_He2DME, float pad_w, float pad_l, float p
   Kev2ADC=50.0;	 //set to 50.0, so 1 adc unit = 20 ev
 
   //TPC_TZERO is used to indicate how long in time the DAQ will read ahead of trigger. in ns unit
-  //It is usually set when develop DAQ software, we do not know it now. 
+  //It is usually set when developing DAQ software, we do not know it now. 
   //I set it to 1600ns here.  Remember to update it when it is set
-  TPC_TZERO = 1000; //1600;   
+  //this value should only be used to shift the wave form to match real data
+  //whatever value it is, it should not affect simulation result.
+  //I wish this value does not vary from channel to channel, if it is, we need to change this code 
+  TPC_TZERO = 1600;  
   //intialize the path cell for reconstruction
   InitElPathCell();
 }
@@ -344,7 +347,7 @@ void DriftEMagboltz::Reconstruct(int chan,int tdc_ns,float& x_r,float& y_r,float
   if( DRIFTESIM_DEBUG>=2 )
   {
     printf("Reconstruct(chan=%4d, tdc=%4d) ==> tic=%d, phi_pad_deg=%.2f, z_pad=%.2f\n",
-      chan,tdc_ns,int(tdc_ns/NS_PER_TIC),phi_rad*rad2deg,z_mm);
+      chan,tdc_ns,int((tdc_ns-TPC_TZERO)/NS_PER_TIC),phi_rad*rad2deg,z_mm);
     printf("==>Output(x_r,y_r,z_r)=(%.2f,%.2f,%.2f) ",x_r,y_r,z_r);
     printf(" or (s_r,phi_r_deg,z_r)=(%.2f,%.2f,%.2f)\n\n",
       s_r_mm, phi_r_rad*rad2deg,z_r);
@@ -368,18 +371,18 @@ void DriftEMagboltz::InitElPathCell()
 
   for( chan = 0; chan<NUM_PADS; chan++ )
   {
-    //Kuhn asked to include ellary and later hits to study background
+    //include early and late hits to study background
     for( tic=0;tic<NAL_SAMP;tic++ )    
     {
-      tdc = tic*NS_PER_TIC;
-      Reconstruct(chan,tdc, x_r, y_r, z_r);
+      tdc = tic*NS_PER_TIC + TPC_TZERO;
+      Reconstruct(chan, tdc, x_r, y_r, z_r);
       r_r=sqrt( x_r*x_r+y_r*y_r);
       if( r_r>=PAD_S || r_r<20. ) //set default values
       {
         rawXYZ[tic][chan].x = 0.;
         rawXYZ[tic][chan].y = 0.;
         rawXYZ[tic][chan].z = 0.;
-        //to save time, jump out whem r_r<25.0 mm
+        //to save time, jump out when r_r<25.0 mm
         //if( r_r<25. ) break;
       }
       else
@@ -520,9 +523,11 @@ int DriftEMagboltz::DriftESim(float x0,float y0,float z0,float deltaE,int &NofTI
   float *x_r,float* y_r,float* z_r,int* chan,int* tdc,int* adc)
 {
   //Suggested number of output tics for each ionization
-  //the wave form is about 380 ns in width
-  NofTIC = 380.0/NS_PER_TIC + 1;
+  //the wave form is about 380 ns in total, width, only 4-sigma (or 2/3) above 
+  //threshold
+  NofTIC = int(380.0*(2./3.)/NS_PER_TIC) + 1;
   if(NofTIC>3) NofTIC=3;
+  //NofTIC=1;
 
   //reset the values 
   for(int t=0;t<NofTIC;t++) {
@@ -576,8 +581,8 @@ int DriftEMagboltz::DriftESim(float x0,float y0,float z0,float deltaE,int &NofTI
   {//now split the energy by 2:1
     adc[1] = int(adc[0]*1.0/3.0);
     adc[0] -= adc[1];
-    tdc[1] = tdc[0];
-    tdc[0] += NS_PER_TIC;
+    tdc[1] = tdc[0] - NS_PER_TIC;
+    tdc[0] += 0;
     chan[1] = chan[0];
   }
   else if (NofTIC == 3) 
@@ -594,7 +599,7 @@ int DriftEMagboltz::DriftESim(float x0,float y0,float z0,float deltaE,int &NofTI
   //get (x_r, y_r, z_r) from vector rawXYZ
   for(int t=0;t<NofTIC;t++) 
   {
-    tic = tdc[t]/NS_PER_TIC;
+    tic = (tdc[t]-TPC_TZERO)/NS_PER_TIC;
     x_r[t]=this->rawXYZ[tic][chan[t]].x;
     y_r[t]=this->rawXYZ[tic][chan[t]].y;
     z_r[t]=this->rawXYZ[tic][chan[t]].z;
@@ -615,8 +620,8 @@ int DriftEMagboltz::DriftESim(float x0,float y0,float z0,float deltaE,int &NofTI
       phi_r_rad=atan2(y_r[t],x_r[t]);
       if( phi_r_rad<0. ) phi_r_rad+=2.0*PI;
       dphi=(phi0_rad-phi_r_rad)*rad2deg;
-      printf("\t %d: tdc=%d (x_r,y_r,z_r)=(%.2f,%.2f,%.2f) -->(r,phi_deg,z)=(%.2f,%.2f,%.2f); dS=%.2f, dPhi=%.2f\n",
-        t,tdc[t],x_r[t],y_r[t],z_r[t],r_r,phi_r_rad*rad2deg,z_r[t],ds,dphi);
+      printf("\t %d: tic=%d (x_r,y_r,z_r)=(%.2f,%.2f,%.2f) -->(r,phi_deg,z)=(%.2f,%.2f,%.2f); dS=%.2f, dPhi=%.2f\n",
+        t,(tdc[t]-TPC_TZERO)/NS_PER_TIC,x_r[t],y_r[t],z_r[t],r_r,phi_r_rad*rad2deg,z_r[t],ds,dphi);
     }
   }
 #endif
