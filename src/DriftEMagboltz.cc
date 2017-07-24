@@ -6,7 +6,7 @@
 /*
 This class is to simulate the drift path of ionizaton electron in the drift region
 of the RTPC12 detector.  The TDC values have been digitalized in ns, it is a
-multiple of NS_PER_TIC(200ns). The tdc include tpc_tzero, which is the extra 
+multiple of NS_PER_TIC(120ns). The tdc include tpc_tzero, which is the extra 
 time that the DAQ will read ahead of trigger, and t_gem2pad, the time that the 
 ionization electron takes to drift from gem1 to pad. That says,
 tdc = t_s2gem1 + t_gem2pad + tzero.
@@ -26,11 +26,13 @@ Magboltz simulation provide the following functions:
 */
 ////////////////////////////////////////////////////////////////////////////////////
 
+//#define HeDME   1 //the drift gas: HeDME or ArCO2
 
 ////////////////////////
-//#define DRIFTESIM_DEBUG 1
+#define DRIFTESIM_DEBUG 1
 ////////////////////////
-#include <stdio.h>
+
+#include "math.h"
 #include "DriftEMagboltz.hh"
 
 
@@ -46,7 +48,7 @@ DriftEMagboltz::DriftEMagboltz(float R_He2DME, float pad_w, float pad_l, float p
   //this value should only be used to shift the wave form to match real data
   //whatever value it is, it should not affect simulation result.
   //I wish this value does not vary from channel to channel, if it is, we need to change this code 
-  TPC_TZERO = 1600;  
+  TPC_TZERO = 0;  
   //intialize the path cell for reconstruction
   InitElPathCell();
 }
@@ -56,60 +58,154 @@ DriftEMagboltz::~DriftEMagboltz()
   ;
 }
 
+//boxmuller gauss number generator
+//input: mean m, standard deviation s 
+double DriftEMagboltz::Gauss(double m, double s)	
+{				        
+	if(s==0.0) return m;
+
+	double x1, x2, w, y1;
+	static double y2;
+	static int use_last = 0;
+
+	if (use_last)		        /* use value from previous call */
+	{
+		y1 = y2;
+		use_last = 0;
+	}
+	else
+	{
+		do {
+			x1 = 2.0 * double(rand())/double(RAND_MAX) - 1.0;
+			x2 = 2.0 * double(rand())/double(RAND_MAX) - 1.0;
+			w = x1 * x1 + x2 * x2;
+		} while ( w >= 1.0 );
+
+		w = sqrt( (-2.0 * log( w ) ) / w );
+		y1 = x1 * w;
+		y2 = x2 * w;
+		use_last = 1;
+	}
+
+	return( m + y1 * s );
+}
+
 //get drift time by s
 float DriftEMagboltz::GetT_s2gem1(float s0_mm,float z0)
 {
   z0+=0;
+#if defined HeDME
   float s0=s0_mm/10.;
   float t_us=0.0; 
   float a=-0.1642, b=-0.0947,c=8.8001;
   t_us = a*s0*s0+b*s0+c;
   return t_us*1000.;
+#else
+  float s2gem=(PAD_S-10.0)/10.-s0_mm/10.;
+  float a_t=1741.179712, b_t=-1.25E+02;
+  float c_t=388.7449859, d_t=-4.33E+01;
+  // calculate drift time [ns] to first GEM
+  float t_drift = a_t*s2gem+b_t*s2gem*s2gem;
+    return t_drift;
+  
+  // determine sigma of drift time [ns]
+  float t_diff = sqrt(c_t*s2gem+d_t*s2gem*s2gem);
+  return Gauss(t_drift,t_diff);
+#endif
 }
 
 //get time offset from 1st gem to pad
 float DriftEMagboltz::GetT_gem2pad(float z0)
 {
+#if defined HeDME
   //Assume A) gem1 to pad is 10mm,  B) the time to travel from gem1 to pad
   //equal to that it drifts 10cm to gem1
   return GetT_s2gem1(PAD_S-20.0,z0);
+#else
+  float t_2GEM2 = 296.082;
+  float sigma_t_2GEM2 = 8.72728;
+  float t_2GEM3 = 296.131;
+  float sigma_t_2GEM3 = 6.77807;
+  float t_2PAD = 399.09;
+  float sigma_t_2PAD = 7.58056;
+  float t_2END = t_2GEM2 + t_2GEM3 + t_2PAD;
+  return t_2END;
+  float sigma_t_gap = sqrt(pow(sigma_t_2GEM2,2)+pow(sigma_t_2GEM3,2)+pow(sigma_t_2PAD,2));
+  return Gauss(t_2END,sigma_t_gap);
+#endif
 }
 
 //get dphi by s
 float DriftEMagboltz::GetdPhi_s2gem1(float s0_mm,float z0)
 {
   z0+=0;
+#if defined HeDME
   float s0=s0_mm/10.;
   float a=0.0287, b=-0.5334, c=2.3475;
   float dphi=a*s0*s0+b*s0+c;
   return dphi;
+#else
+  float s2gem=(PAD_S-10.0)/10.-s0_mm/10.;
+  float a_phi=0.161689123, b_phi=0.023505021;
+  float c_phi=6.00E-06,d_phi=2.00E-06;
+  // calculate drift angle to first GEM at 7 cm [rad]
+  double phi_drift = a_phi*s2gem+b_phi*s2gem*s2gem;
+  return phi_drift;
+  // determine sigma of drift angle [rad]
+  double phi_diff = sqrt(c_phi*s2gem+d_phi*s2gem*s2gem);
+  return Gauss(phi_drift,phi_diff);
+#endif
 }
 
 //get dphi offset from 1st gem to pad
 float DriftEMagboltz::GetdPhi_gem2pad(float z0)
 {
+#if defined HeDME
   //Assume A) gem1 to pad is 10mm,  B) the phi deflection from gem1 to pad
   //equal to that to it drifts 10cm to gem1
   return GetdPhi_s2gem1(PAD_S-20.0,z0);
+#else
+  float phi_2GEM2 = 0.0492538;
+  float sigma_phi_2GEM2 = 0.00384579;
+  float phi_2GEM3 = 0.0470817;
+  float sigma_phi_2GEM3 = 0.00234478;
+  float phi_2PAD = 0.0612122;
+  float sigma_phi_2PAD = 0.00238653;
+  float phi_2END = phi_2GEM2 + phi_2GEM3 + phi_2PAD;
+  return phi_2END;
+  float sigma_phi_gap = sqrt(pow(sigma_phi_2GEM2,2)+pow(sigma_phi_2GEM3,2)+pow(sigma_phi_2PAD,2));
+  return Gauss(phi_2END,sigma_phi_gap);
+#endif
 }
 
 //reconstruct s by drifting time
 //return negative s if error
 float DriftEMagboltz::GetSByT(float t_s2gem1,float z0)
 {
-  float s_r=-10.0;
   z0+=0;
+  float s_r=-10;
+#if defined HeDME
   float t_us=t_s2gem1/1000.;
   float a=-0.0335, b=-0.3208,c=6.9481;
   s_r = a*t_us*t_us+b*t_us+c;   //in cm
+  s_r*=10;   //turn s_r from cm to mm
+#else
+  //float a_t=1741.179712, b_t=-1.25E+02;
+  // calculate starting s0 using "the drift time [ns] from s0 to the first GEM"
+  //float s2gem=(PAD_S-10.0)/10.-s0_mm/10.;  //in cm
+  //float t_drift = a_t*s2gem+b_t*s2gem*s2gem;
+  float b=1741.179712, a=-1.25E+02;
+  float s2gem = (sqrt(b*b+4*a*t_s2gem1)-b)/(2*a);  //in cm
+  s_r = PAD_S-10.0 - s2gem*10;
+#endif
 
 #ifdef DRIFTESIM_DEBUG
   if( DRIFTESIM_DEBUG>=4 )
   {
-    printf("GetSByT(t_s2gem1=%.0f) ==> s_r=%.1fmm\n",t_s2gem1,s_r*10);
+    printf("GetSByT(t_s2gem1=%.0f) ==> s_r=%.1fmm\n",t_s2gem1,s_r);
   }
 #endif
-  return s_r*10;   //turn s_r from cm to mm
+  return s_r;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
@@ -401,7 +497,7 @@ void DriftEMagboltz::InitElPathCell()
     FILE *pFile= fopen ("DriftPath_Jixie.txt" , "w");
     cout<<"\nJixie's Reconstruction map"<<endl;
 
-    for( chan = 0; chan<=800; chan+=100 )
+    for( chan = 0; chan<=400; chan+=100 )
     {
       fprintf(pFile,"\n  ID  TIC    x(mm)    y(mm)    z(mm)    r(mm) phi(deg)\n");
       for( tic=0;tic<NAL_SAMP;tic++ )
@@ -527,7 +623,7 @@ int DriftEMagboltz::DriftESim(float x0,float y0,float z0,float deltaE,int &NofTI
   //threshold
   NofTIC = int(380.0*(2./3.)/NS_PER_TIC) + 1;
   if(NofTIC>3) NofTIC=3;
-  //NofTIC=1;
+  NofTIC=1;  //force to have only one tic
 
   //reset the values 
   for(int t=0;t<NofTIC;t++) {

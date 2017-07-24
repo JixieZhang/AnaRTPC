@@ -5,14 +5,15 @@
 #include <iostream>
 #include <stdio.h>
 #include <math.h>
-#include <math.h>
+#include <stdlib.h>
+#include "ChannelMap.hh"
 
 using namespace std;
 
-#define NS_PER_TIC 200    // nano-seconds per tic
-#define NUM_PADS 18000    // Number of actual pads 
-#define NAL_SAMP 55       // Number of tic samples 
+#define NS_PER_TIC 120    // nano-seconds per tic
+#define NAL_SAMP 90       // Number of tic samples 
 
+//#define NUM_PADS 18000    // Number of actual pads, defined in ChannelMap 
 
 static const double PI=4.0*atan(1.0);
 static const double rad2deg=180./PI;
@@ -28,8 +29,6 @@ typedef struct {
   float y;
   float z;
 } cartician_t; //this array is needed to measure the residuals
-
-
 
 //////////////////////////////////////////////////////////////////////////////////////
 class DriftEMagboltz
@@ -76,7 +75,10 @@ private:
   //input:  channel id and tdc (in ns unit, already include TPC_TZERO)
   //output: reconstruncted ionization location x_r,y_r,z_r (in mm)
   void Reconstruct(int chan,int tdc_ns,float& x_r,float& y_r,float& z_r);
-
+  
+  //boxmuller gauss number generator
+  //input: mean m, standard deviation s 
+  double Gauss(double m, double s);
 
 private:
   //the following coming from Magboltz

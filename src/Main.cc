@@ -11,6 +11,7 @@ using namespace std;
 #include "MyStyle.h"
 
 #include "MulDFit.h"
+#include "ChannelMap.hh"
 
 void AnaRTPC(const char *infile,const char *outfile="", int readoutpad=2, int ntrack_per_event=1);
 
@@ -23,6 +24,8 @@ void Calib(const char* infile="nt_ep.root");
 
 int main(int argc, char** argv)
 {
+ChannelMap *pChanMap=new ChannelMap();
+delete pChanMap;
 
   if (argc<3) 
   {

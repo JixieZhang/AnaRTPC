@@ -145,7 +145,7 @@ void ConfigPadSize(int padtype)
   else if(padtype == 6)
   {
     RTPC_Pad_Z = 4.0;		//mm
-    RTPC_Pad_W = 2.8;		//mm
+    RTPC_Pad_W = 2.79;		//mm
     RTPC_Anode_R    = 70;	//mm
     RTPC_ReadOut_R  = 80;	//mm
   }

@@ -19,13 +19,14 @@
 #include "TGeoVolume.h"
 #include "TGeoMedium.h"
 #include "TPolyLine3D.h"
+#include "TGeoMatrix.h"  //for TGeoTranslation
 
 using namespace std;
 TGeoVolume *gWorld=0; 
 //TPolyLine3D *track3D[25]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 //TPolyLine3D *track3Dr[25]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
-int thisevent=0;
+int thisevent=-1;
 
 void set_color_env(){   
   //******************************************************************
@@ -65,7 +66,7 @@ void set_color_env(){
   */
 }
 
-void event3D()
+void BuildGeometry()
 {
   gSystem->Load("libGeom");
   TGeoManager *geom = new TGeoManager("simple1", "Simple geometry");
@@ -162,7 +163,14 @@ void event3D()
   gWorld = top;
 }
 
-int  GLDisplay(int ievent=0)
+void save()
+{
+  gPad->Update();
+  gPad->SaveAs(Form("Movie/GLEvent_%03d.png",thisevent));
+  gPad->SaveAs(Form("Movie/GLEvent_%03d.gif",thisevent));
+}
+
+int  GLDisplay(int ievent=0, int ntrack_per_event=25)
 {
   
   set_color_env();
@@ -178,19 +186,18 @@ int  GLDisplay(int ievent=0)
   
   Int_t    steps;
   Int_t    rsteps;
-  Int_t    steps_temp;//I need this variable 
   Int_t    fIndex;
   Int_t    fHit;
   Int_t    fHit_m;
 
-  Int_t    fSenPad[500];
-  Int_t    fTDC[500], fADC[500];
+  Int_t    fSenPad[255];
+  Int_t    fTDC[255], fADC[255];
 
-  Double_t fXRec[500], fYRec[500], fZRec[500];
-  Double_t fX[500], fY[500], fZ[500];
+  Double_t fXRec[255], fYRec[255], fZRec[255];
+  Double_t fX[255], fY[255], fZ[255];
 
-  Double_t xrec[500],yrec[500],zrec[500];
-  Double_t x[500],y[500],z[500];
+  Double_t xrec[255],yrec[255],zrec[255];
+  Double_t x[255],y[255],z[255];
 
   
   Double_t fEdep;
@@ -208,7 +215,7 @@ int  GLDisplay(int ievent=0)
   
   Int_t Entries = RTPCTree->GetEntries();
   cout<<"Entries: "<<Entries<<endl;
-  if(ievent>=int(Entries/25)) return -1;
+  if(ievent>=int(Entries/ntrack_per_event)) return -1;
   
   RTPCTree ->SetBranchAddress("Index", &fIndex);
   RTPCTree ->SetBranchAddress("HitNum", &fHit);
@@ -236,98 +243,94 @@ int  GLDisplay(int ievent=0)
   
   Int_t col, row;
     
+  TCanvas *c1 = new TCanvas("c1","DISPLAY",780,655);
+  c1->cd();
+  
   //Call the 3D geometry
-  if(!gWorld)  event3D();
+  if(!gWorld)  BuildGeometry();
   else gWorld->Draw("ogl");
   
   hDisplay->SetXTitle("columns (Z direction)"); 
   hDisplay->SetYTitle("rows (Phi evolute)");
   hDisplay->SetZTitle("TDC time"); 
 
-  Int_t p = 25*ievent;
+  Int_t idx = ntrack_per_event*ievent;
 
   int tracknum=0;
-  for(Int_t i = 0; i < 25; i++)
+  for(Int_t i = 0; i < ntrack_per_event; i++)
+  {
+    if(idx+i>=Entries) break;
+    RTPCTree->GetEntry(idx+i);
+
+    cout<<"HitNum_m: "<<fHit_m<<endl;
+    if(fHit_m<5) continue;
+
+    steps = 0;
+    rsteps = 0;
+    
+    for (Int_t k=0;k<fHit;k++)
     {
-
-      if(p+i>=Entries) break;
-      RTPCTree->GetEntry(p+i);
-
-      steps_temp = fHit_m;
-
-      //RTPCTree   ->Show(i,200);  
-      //	 
-      
-      cout<<"Hits Num: "<<fHit_m<<endl;
-      if(fHit_m<5) continue;
-
-      steps = 0;
-      rsteps = 0;
-      
-      for (Int_t k=0;k<fHit;k++)
-	{
-	  if (fX[k]+fY[k]!=0) 
-	    {
-	      x[steps] = fX[k]/10;// so we work in cm
-	      y[steps] = fY[k]/10;
-	      z[steps] = fZ[k]/10;
-	      steps++;
-	    } 
-	}
-      for (Int_t k=0;k<fHit_m;k++)
-	{
-
-	  if (fXRec[k]+fYRec[k]!=0) 
-	    {	      
-	      //cout<<"fRec[k]=("<<fXRec[k]<<", "<<fYRec[k]<<", "<<fZRec[k]<<")"<<endl;
-	      xrec[rsteps] = fXRec[k]/10;// so we work in cm
-	      yrec[rsteps] = fYRec[k]/10;
-	      zrec[rsteps] = fZRec[k]/10;
-	      rsteps++;
-	    }
-
-	}
-
-      for (Int_t k=0;k<steps;k++)
-	{
-	  row = fSenPad[k]/ncol;
-	  col = fSenPad[k]%ncol; 
-	  int time = fTDC[k];
-	  //	  cout<<"row: "<<row<<" col: "<<col<<endl<<endl;
-	  //hDisplay->Fill(col,row, time);
-	  hDisplay->Fill(col,row);
-	}
-      
-      //      cout<<"Entry: "<<fIndex<<endl;
-
-      //cout<<steps<<endl;
-      TPolyLine3D *track3Dr = new TPolyLine3D(rsteps,xrec,yrec,zrec);
-      TPolyLine3D *track3D = new TPolyLine3D(steps,x,y,z);
-   
-      track3D->SetLineWidth(2);
-      track3D->SetLineColor(kBlue);
-      track3D->Draw("same");
-
-      track3Dr->SetLineWidth(2);
-      track3Dr->SetLineColor(kRed);
-      track3Dr->Draw("same");
-
+      if (fX[k]+fY[k]!=0) 
+        {
+          x[steps] = fX[k]/10;// so we work in cm
+          y[steps] = fY[k]/10;
+          z[steps] = fZ[k]/10;
+          steps++;
+        } 
+    }
+    for (Int_t k=0;k<fHit_m;k++)
+    {
+      if (fXRec[k]+fYRec[k]!=0) 
+        {	      
+          //cout<<"fRec[k]=("<<fXRec[k]<<", "<<fYRec[k]<<", "<<fZRec[k]<<")"<<endl;
+          xrec[rsteps] = fXRec[k]/10;// so we work in cm
+          yrec[rsteps] = fYRec[k]/10;
+          zrec[rsteps] = fZRec[k]/10;
+          rsteps++;
+        }
     }
 
+    for (Int_t k=0;k<steps;k++)
+    {
+      row = fSenPad[k]/ncol;
+      col = fSenPad[k]%ncol; 
+      int time = fTDC[k];
+      //	  cout<<"row: "<<row<<" col: "<<col<<endl<<endl;
+      //hDisplay->Fill(col,row, time);
+      hDisplay->Fill(col,row);
+    }
+    
+    //      cout<<"Entry: "<<fIndex<<endl;
+
+    //cout<<steps<<endl;
+    TPolyLine3D *track3Dr = new TPolyLine3D(rsteps,xrec,yrec,zrec);
+    TPolyLine3D *track3D = new TPolyLine3D(steps,x,y,z);
+ 
+    track3D->SetLineWidth(2);
+    track3D->SetLineColor(kBlue);
+    track3D->Draw("same");
+
+    track3Dr->SetLineWidth(2);
+    track3Dr->SetLineColor(kRed);
+    track3Dr->Draw("same");
+  }
+
+  gPad->Modified();
   gPad->Update();
-  gPad->SaveAs(Form("Movie/GLEvent_%03d.png",ievent));
-
-  //TCanvas *c1a = new TCanvas("c1a","DISPLAY",1000,10,800,600);
-  //c1a->cd();
-  //hDisplay->Draw("COLZTEXT");    
+  //for some reason, this picture contains not the whole RTPC
+  //gPad->SaveAs(Form("Movie/GLEvent_%03d.png",ievent));
   
-  //   c1a->SetGrid();
-
-  //    hDisplay->Draw("lego20");
-  //    hDisplay->Draw("COLZ");
+  TCanvas *c1a = new TCanvas("c1a","DISPLAY",1000,10,800,600);
+  c1a->cd();
+  hDisplay->Draw("COLZTEXT");    
+  //c1a->SetGrid();
+  //hDisplay->Draw("lego20");
+  //hDisplay->Draw("COLZ");
 
   //   DrawGrid();
 
+  thisevent=ievent;
+  
   return 0;
 }
 
@@ -354,21 +357,14 @@ void DrawGrid()
   hgrid->GetXaxis()->SetLabelOffset(999.);
 }
 
-void go(int n=1, int s=3, int istart=0)
+void go(int n=1, int s=3, int istart=-1)
 {
-  thisevent = (istart==0) thisevent+1 : istart;
+  if(istart==-1) istart=thisevent+1;
+  if(istart<0) istart=0;
   for(int i=0;i<n;i++)
-    {
-      int ret=GLDisplay(thisevent++);
-      if(ret==-1) break;
-      gSystem->Sleep(s*1000);
-
-    }
-  
-}
-void save()
-{
-      gPad->Update();
-      gPad->SaveAs(Form("Movie/GLEvent_%03d.png",thisevent-1));
-      gPad->SaveAs(Form("Movie/GLEvent_%03d.gif",thisevent-1));
+  {
+    int ret=GLDisplay(istart+i);
+    if(ret==-1) break;
+    gSystem->Sleep(s*1000);
+  }
 }
