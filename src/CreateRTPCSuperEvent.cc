@@ -5,7 +5,7 @@
 #include "stdlib.h"
 #include <iostream>
 #include <fstream>
-#include <iomanip> 
+#include <iomanip>
 #include "math.h"
 #include "DriftEMagboltz.hh"
 using namespace std;
@@ -44,24 +44,29 @@ using namespace std;
 
 //#define RTPC_BoNuS6 1
 //the following have been defined in AnaRTPC
-extern double RTPC_Cathode_R; // = 30;		//mm
-extern double RTPC_Anode_R; //   = 80;		//mm
-extern double RTPC_ReadOut_R; // = 90;		//mm
-extern double RTPC_TDC_Window; //= 25;		//ns
-extern double RTPC_Pad_Z; // = 5.0;		//mm
-extern double RTPC_Pad_W; // = 4.5;		//mm
-extern double RTPC_Length; // = 400;            //mm  
+extern double RTPC_Cathode_R; // = 30;    //mm
+extern double RTPC_Anode_R; //   = 80;    //mm
+extern double RTPC_ReadOut_R; // = 90;    //mm
+extern double RTPC_TDC_Window; //= 25;    //ns
+extern double RTPC_Pad_Z; // = 5.0;   //mm
+extern double RTPC_Pad_W; // = 4.5;   //mm
+extern double RTPC_Length; // = 400;            //mm
 
 extern DriftEMagboltz *gEsim;
 
-//estimate number of channel: assuming 30 degree missing in phi coverage 
+// estimate number of channels: assuming 3.0mm GEM1 glue area width
 // Row# = int(2*PI*Readout_R/RTPC_Pad_W)
 // Col# = int(RTPC_Length/RTPC_Pad_Z)
 extern int GetNofCh(int padtype);
 
-//config pad size:  
-//padtype = 1)4.5x5,  2) 2x2  3) compass 2-D readout, 0.4x0.4 equivalent
-//4)compass 2-D readout, 1x20,1 x 1 mm equivalent, 5) 2.5x4 mm,Sebastian's
+//config pad size:
+//padtype:
+//1) 4.5x5 mm, 5cm DriftRegion
+//2) TDIS: 2x2 mm, 5<DriftRegion<15
+//3) compass 2-D readout, 0.4x20 stripe, 0.4x0.4 mm equivalent, 5cm DriftRegion
+//4) compass 2-D readout, 1.0x20 stripe, 1x1 mm equivalent, 5cm DriftRegion
+//5) compass 2-D readout, 1.0x20 stripe, 1x1 mm equivalent, 4cm DriftRegion
+//6) RTPC12 config: 2.8016x4.1016 mm, add 4mil gap between pads, R_in_readout=80.42
 extern void ConfigPadSize(int padtype);
 
 static track0 *Proton=0;
@@ -69,25 +74,25 @@ static track1 *Electron=0;
 static config *Config=0;
 
 //boxmuller gauss number generator
-//input: mean m, standard deviation s 
+//input: mean m, standard deviation s
 extern double fGaus(double m, double s);
 extern void PrintAcc(TH3F *h3,TH3F *h3N, int Nmin=0, int TCS=0);
 
 extern int FitATrack(int StepNum, double StepX[],double StepY[],double StepZ[],
-  double &R, double &A, double &B,
-  double &Phi_deg, double &Theta_deg, double &Z,
-  double RLimit_l=30.1, double RLimit_h=79.9);
+                 double &R, double &A, double &B,
+                 double &Phi_deg, double &Theta_deg, double &Z,
+                 double RLimit_l=30.1, double RLimit_h=79.9);
 
 extern void RTPC_Recon(double MeanBz, double R_rec, double Theta_rec, double Phi_rec,
-  double &P_corr, double &Theta_corr, double &Phi_corr);
+                   double &P_corr, double &Theta_corr, double &Phi_corr);
 
 extern const char *GetFileName(const char* str);
 
 extern const char *GetBaseName(const char* str);
 
 
-void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_ep.root", 
-  int padtype=2, int ntrack_per_event=25)
+void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_ep.root",
+                    int padtype=2, int ntrack_per_event=25)
 {
   ////////////////////////////////////////////////////////
   TFile *InFile = TFile::Open(infile);
@@ -105,7 +110,7 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
 
   ConfigPadSize(padtype);
 
-  gEsim = new DriftEMagboltz(0.9,(float)RTPC_Pad_W,(float)RTPC_Pad_Z,(float)RTPC_ReadOut_R,(float)RTPC_Length);
+  gEsim = new DriftEMagboltz(0.9, RTPC_Pad_W, RTPC_Pad_Z, RTPC_ReadOut_R, RTPC_Length);
 
   char pKey[100];
 #ifdef RTPC_BoNuS6
@@ -121,9 +126,9 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
 
   Proton = new track0();
   if(gROOT->FindObject("track1"))
-  {
-    Electron = new track1();
-  }
+    {
+      Electron = new track1();
+    }
   Config = new config();
 
   //const double kMassPr=0.9383;
@@ -132,7 +137,7 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
   //tree variables
   int    ThrownIndex, Index;
   int    Pid;
-  double Beam, Ei;	
+  double Beam, Ei;
 
   double X0,Y0,Z0;
 
@@ -208,54 +213,54 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
   int NP=55, NTh_tr=35, NPh_tr=36;
   double P_min=0.0, P_max=11.0;
   double Th_min=5*deg, Th_max=40*deg;
-  double Ph_min=-180*deg, Ph_max=180*deg; 	
+  double Ph_min=-180*deg, Ph_max=180*deg;
 
 
   TH3F *h3N = new TH3F("h3N","Detected e^{-};#phi;#theta;P/GeV",
-    NPh_tr,Ph_min,Ph_max,NTh_tr,Th_min,Th_max,NP,P_min,P_max);
+                   NPh_tr,Ph_min,Ph_max,NTh_tr,Th_min,Th_max,NP,P_min,P_max);
   TH3F *h3D = new TH3F("h3D","Thrown e^{-};#phi;#theta;P/GeV",
-    NPh_tr,Ph_min,Ph_max,NTh_tr,Th_min,Th_max,NP,P_min,P_max);
+                   NPh_tr,Ph_min,Ph_max,NTh_tr,Th_min,Th_max,NP,P_min,P_max);
 
   TH2F *h2N_PT = new TH2F("h2N_PT","Detected e^{-};#theta;P/GeV",
-    NTh_tr,Th_min,Th_max,NP,P_min,P_max);
+                    NTh_tr,Th_min,Th_max,NP,P_min,P_max);
   TH2F *h2D_PT = new TH2F("h2D_PT","Thrown e^{-};#theta;P/GeV",
-    NTh_tr,Th_min,Th_max,NP,P_min,P_max);
+                    NTh_tr,Th_min,Th_max,NP,P_min,P_max);
 
   TH2F *h2N_TF = new TH2F("h2N_TF","Detected e^{-};#phi;#theta",
-    NPh_tr,Ph_min,Ph_max,NTh_tr,Th_min,Th_max);
+                    NPh_tr,Ph_min,Ph_max,NTh_tr,Th_min,Th_max);
   TH2F *h2D_TF = new TH2F("h2D_TF","Thrown e^{-};#phi;#theta",
-    NPh_tr,Ph_min,Ph_max,NTh_tr,Th_min,Th_max);
+                    NPh_tr,Ph_min,Ph_max,NTh_tr,Th_min,Th_max);
 
   TH2F *h2N_PF = new TH2F("h2N_PF","Detected e^{-};#phi;P/GeV",
-    NPh_tr,Ph_min,Ph_max,NP,P_min,P_max);
+                    NPh_tr,Ph_min,Ph_max,NP,P_min,P_max);
   TH2F *h2D_PF = new TH2F("h2D_PF","Thrown e^{-};#phi;P/GeV",
-    NPh_tr,Ph_min,Ph_max,NP,P_min,P_max);
+                    NPh_tr,Ph_min,Ph_max,NP,P_min,P_max);
 
 
   NP=30, NTh_tr=35, NPh_tr=36;
   P_min=0.05, P_max=0.35;
   Th_min=20*deg, Th_max=160*deg;
-  Ph_min=-180*deg, Ph_max=180*deg; 	
+  Ph_min=-180*deg, Ph_max=180*deg;
 
   TH3F *h3N_p = new TH3F("h3N_p","Detected p_{RTPC};#phi;#theta;P/GeV",
-    NPh_tr,Ph_min,Ph_max,NTh_tr,Th_min,Th_max,NP,P_min,P_max);
+                   NPh_tr,Ph_min,Ph_max,NTh_tr,Th_min,Th_max,NP,P_min,P_max);
   TH3F *h3D_p = new TH3F("h3D_p","Thrown p_{RTPC};#phi;#theta;P/GeV",
-    NPh_tr,Ph_min,Ph_max,NTh_tr,Th_min,Th_max,NP,P_min,P_max);
+                   NPh_tr,Ph_min,Ph_max,NTh_tr,Th_min,Th_max,NP,P_min,P_max);
 
   TH2F *h2N_PT_p = new TH2F("h2N_PT_p","Detected p_{RTPC};#theta;P/GeV",
-    NTh_tr,Th_min,Th_max,NP,P_min,P_max);
+                      NTh_tr,Th_min,Th_max,NP,P_min,P_max);
   TH2F *h2D_PT_p = new TH2F("h2D_PT_p","Thrown p_{RTPC};#theta;P/GeV",
-    NTh_tr,Th_min,Th_max,NP,P_min,P_max);
+                      NTh_tr,Th_min,Th_max,NP,P_min,P_max);
 
   TH2F *h2N_TF_p = new TH2F("h2N_TF_p","Detected p_{RTPC};#phi;#theta",
-    NPh_tr,Ph_min,Ph_max,NTh_tr,Th_min,Th_max);
+                      NPh_tr,Ph_min,Ph_max,NTh_tr,Th_min,Th_max);
   TH2F *h2D_TF_p = new TH2F("h2D_TF_p","Thrown p_{RTPC};#phi;#theta",
-    NPh_tr,Ph_min,Ph_max,NTh_tr,Th_min,Th_max);
+                      NPh_tr,Ph_min,Ph_max,NTh_tr,Th_min,Th_max);
 
   TH2F *h2N_PF_p = new TH2F("h2N_PF_p","Detected p_{RTPC};#phi;P/GeV",
-    NPh_tr,Ph_min,Ph_max,NP,P_min,P_max);
+                      NPh_tr,Ph_min,Ph_max,NP,P_min,P_max);
   TH2F *h2D_PF_p = new TH2F("h2D_PF_p","Thrown p_{RTPC};#phi;P/GeV",
-    NPh_tr,Ph_min,Ph_max,NP,P_min,P_max);
+                      NPh_tr,Ph_min,Ph_max,NP,P_min,P_max);
 
 
   ///////////////////////////////////////////////////////////////////////
@@ -273,33 +278,33 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
   pFile->cd();
 
   TH2F *h2Thre_C = new TH2F("h2Thre_C","Barely Reach Drift Region;#theta-90 (deg);P (MeV/c)",
-    180,-90,90,200,50,250);
+                      180,-90,90,200,50,250);
   TH2F *h2Thre_A= new TH2F("h2Thre_A","Barely Reach 1st GEM Foil;#theta-90 (deg);P (MeV/c)",
-    180,-90,90,200,50,250);
+                     180,-90,90,200,50,250);
 
-  TTree *pTree=new TTree("ep","tagged DIS events");     
+  TTree *pTree=new TTree("ep","tagged DIS events");
 
   //////////////////////////////////////////////////////////////////////
-  pTree->Branch("ThrownIndex",&ThrownIndex,"ThrownIndex/I"); 
-  pTree->Branch("Index",&Index,"Index/I"); 
-  pTree->Branch("Pid",&Pid,"Pid/I"); 
+  pTree->Branch("ThrownIndex",&ThrownIndex,"ThrownIndex/I");
+  pTree->Branch("Index",&Index,"Index/I");
+  pTree->Branch("Pid",&Pid,"Pid/I");
 
-  pTree->Branch("Beam",&Beam,"Beam/D"); 
-  pTree->Branch("Ei",&Ei,"Ei/D");  
+  pTree->Branch("Beam",&Beam,"Beam/D");
+  pTree->Branch("Ei",&Ei,"Ei/D");
 
-  pTree->Branch("X0",&X0,"X0/D");        
-  pTree->Branch("Y0",&Y0,"Y0/D");        
-  pTree->Branch("Z0",&Z0,"Z0/D");  
+  pTree->Branch("X0",&X0,"X0/D");
+  pTree->Branch("Y0",&Y0,"Y0/D");
+  pTree->Branch("Z0",&Z0,"Z0/D");
 
   //electron which match to the proton,
   //this is used to study the electron background
-  pTree->Branch("P0_e",&P0_e,"P0_e/D");  
+  pTree->Branch("P0_e",&P0_e,"P0_e/D");
   pTree->Branch("Theta0_e",&Theta0_e,"Theta0_e/D");
   pTree->Branch("Phi0_e",&Phi0_e,"Phi0_e/D");
-  pTree->Branch("Xvb_e",&Xvb_e,"Xvb_e/D");        
-  pTree->Branch("Yvb_e",&Yvb_e,"Yvb_e/D");        
-  pTree->Branch("Zvb_e",&Zvb_e,"Zvb_e/D");  
-  pTree->Branch("Pvb_e",&Pvb_e,"Pvb_e/D");  
+  pTree->Branch("Xvb_e",&Xvb_e,"Xvb_e/D");
+  pTree->Branch("Yvb_e",&Yvb_e,"Yvb_e/D");
+  pTree->Branch("Zvb_e",&Zvb_e,"Zvb_e/D");
+  pTree->Branch("Pvb_e",&Pvb_e,"Pvb_e/D");
   pTree->Branch("Thetavb_e",&Thetavb_e,"Thetavb_e/D");
   pTree->Branch("Phivb_e",&Phivb_e,"Phivb_e/D");
 
@@ -309,20 +314,20 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
   pTree->Branch("Phi0_rec_e",&Phi0_rec_e,"Phi0_rec_e/D");
   pTree->Branch("P0_rec_e",&P0_rec_e,"P0_rec_e/D");
 
-  pTree->Branch("X0_rec_e",&X0_rec_e,"X0_rec_e/D"); 
-  pTree->Branch("Y0_rec_e",&Y0_rec_e,"Y0_rec_e/D"); 
-  pTree->Branch("Z0_rec_e",&Z0_rec_e,"Z0_rec_e/D");  
+  pTree->Branch("X0_rec_e",&X0_rec_e,"X0_rec_e/D");
+  pTree->Branch("Y0_rec_e",&Y0_rec_e,"Y0_rec_e/D");
+  pTree->Branch("Z0_rec_e",&Z0_rec_e,"Z0_rec_e/D");
 
 
   //////////////////////////////////////////////////////////////////////
   //proton
-  pTree->Branch("P0_p",&P0_p,"P0_p/D");  
+  pTree->Branch("P0_p",&P0_p,"P0_p/D");
   pTree->Branch("Theta0_p",&Theta0_p,"Theta0_p/D");
   pTree->Branch("Phi0_p",&Phi0_p,"Phi0_p/D");
-  pTree->Branch("Xvb_p",&Xvb_p,"Xvb_p/D");        
-  pTree->Branch("Yvb_p",&Yvb_p,"Yvb_p/D");        
-  pTree->Branch("Zvb_p",&Zvb_p,"Zvb_p/D");  
-  pTree->Branch("Pvb_p",&Pvb_p,"Pvb_p/D");  
+  pTree->Branch("Xvb_p",&Xvb_p,"Xvb_p/D");
+  pTree->Branch("Yvb_p",&Yvb_p,"Yvb_p/D");
+  pTree->Branch("Zvb_p",&Zvb_p,"Zvb_p/D");
+  pTree->Branch("Pvb_p",&Pvb_p,"Pvb_p/D");
   pTree->Branch("Thetavb_p",&Thetavb_p,"Thetavb_p/D");
   pTree->Branch("Phivb_p",&Phivb_p,"Phivb_p/D");
 
@@ -330,9 +335,9 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
   pTree->Branch("Phi0_rec_p",&Phi0_rec_p,"Phi0_rec_p/D");
   pTree->Branch("P0_rec_p",&P0_rec_p,"P0_rec_p/D");
 
-  pTree->Branch("X0_rec_p",&X0_rec_p,"X0_rec_p/D"); 
-  pTree->Branch("Y0_rec_p",&Y0_rec_p,"Y0_rec_p/D"); 
-  pTree->Branch("Z0_rec_p",&Z0_rec_p,"Z0_rec_p/D");  
+  pTree->Branch("X0_rec_p",&X0_rec_p,"X0_rec_p/D");
+  pTree->Branch("Y0_rec_p",&Y0_rec_p,"Y0_rec_p/D");
+  pTree->Branch("Z0_rec_p",&Z0_rec_p,"Z0_rec_p/D");
 
 
   pTree->Branch("Smin",&Smin,"Smin/D");
@@ -364,15 +369,15 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
   pTree->Branch("StepID_rec",&StepID_rec[0],"StepID_rec[HitNum_rec]/I");
   pTree->Branch("StepTDC_rec",&StepTDC_rec[0],"StepTDC_rec[HitNum_rec]/I");
   pTree->Branch("StepADC_rec",&StepADC_rec[0],"StepADC_rec[HitNum_rec]/I");
-#endif 
+#endif
 
-  pTree->Branch("R_sim",&R_sim,"R_sim/D");			
+  pTree->Branch("R_sim",&R_sim,"R_sim/D");
   pTree->Branch("A_sim",&A_sim,"A_sim/D");
   pTree->Branch("B_sim",&B_sim,"B_sim/D");
   pTree->Branch("Theta_sim",&Theta_sim,"Theta_sim/D");
   pTree->Branch("Phi_sim",&Phi_sim,"Phi_sim/D");
-  pTree->Branch("Z_sim",&Z_sim,"Z_sim/D");  
-  pTree->Branch("DCA_sim",&DCA_sim,"DCA_sim/D");  
+  pTree->Branch("Z_sim",&Z_sim,"Z_sim/D");
+  pTree->Branch("DCA_sim",&DCA_sim,"DCA_sim/D");
 
   //after hit merge
   pTree->Branch("HitNum_m",&HitNum_m,"HitNum_m/I");
@@ -384,13 +389,13 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
   pTree->Branch("StepZ_rec_m",&StepZ_rec_m[0],"StepZ_rec_m[HitNum_m]/D");
   pTree->Branch("StepS_rec_m",&StepS_rec_m[0],"StepS_rec_m[HitNum_m]/D");
   pTree->Branch("StepPhi_rec_m",&StepPhi_rec_m[0],"StepPhi_rec_m[HitNum_m]/D");
-  pTree->Branch("R_rec",&R_rec,"R_rec/D");			
+  pTree->Branch("R_rec",&R_rec,"R_rec/D");
   pTree->Branch("A_rec",&A_rec,"A_rec/D");
   pTree->Branch("B_rec",&B_rec,"B_rec/D");
   pTree->Branch("Theta_rec",&Theta_rec,"Theta_rec/D");
   pTree->Branch("Phi_rec",&Phi_rec,"Phi_rec/D");
-  pTree->Branch("Z_rec",&Z_rec,"Z_rec/D");  
-  pTree->Branch("DCA_rec",&DCA_rec,"DCA_rec/D");  
+  pTree->Branch("Z_rec",&Z_rec,"Z_rec/D");
+  pTree->Branch("DCA_rec",&DCA_rec,"DCA_rec/D");
 
 
   //////////////////////////////////////////////////////////////////////
@@ -405,13 +410,13 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
   //RTPC resolution
   //in Bonus6, the uncertainty of S is 0.35 mm, which is corresponding to 114/2 ns
   //in Bonus12, the time window is 25 ns, therefore dS=0.35/114*25=0.077mm
-  //Assuming the readout pad is 4.5(phi)x5(z) mm, located at S=90mm, 
-  //then dPhi = RTPC_Pad_W/sqrt(12)/(2*PI*R) *(2*PI) = RTPC_Pad_W/sqrt(12)/R 	
+  //Assuming the readout pad is 4.5(phi)x5(z) mm, located at S=90mm,
+  //then dPhi = RTPC_Pad_W/sqrt(12)/(2*PI*R) *(2*PI) = RTPC_Pad_W/sqrt(12)/R
 
   //I found that I need to make it a factor of 1.7 in order to match the resolution
-  double pResS_p=1.7*0.35*RTPC_TDC_Window/114;  
-  double pResPh_p=RTPC_Pad_W/sqrt(12.)/RTPC_ReadOut_R; 
-  double pResZ_p=RTPC_Pad_Z/sqrt(12.); 
+  double pResS_p=1.7*0.35*RTPC_TDC_Window/114;
+  double pResPh_p=RTPC_Pad_W/sqrt(12.)/RTPC_ReadOut_R;
+  double pResZ_p=RTPC_Pad_Z/sqrt(12.);
   //////////////////////////////////////////////////////////////////////
 
   ofstream foutP;
@@ -450,15 +455,15 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
   int pFoundGoodTrackInSuperEvent = 0;
   Long64_t nentries = Proton->fChain->GetEntriesFast();
   Long64_t nb0 = 0, nb1 = 0;
-  for (Long64_t i=0; i<nentries;i++) 
-    //for (Long64_t i=0; i<5;i++) 
+  for (Long64_t i=0; i<nentries;i++)
+    //for (Long64_t i=0; i<5;i++)
   {
     if(!((i+1)%1000))
       printf("processing event %6d / %6d \r",int(i+1),int(nentries));
 
     //do proton first since its acceptance is smaller
     //read proton
-    nb1 = Proton->fChain->GetEntry(i);        
+    nb1 = Proton->fChain->GetEntry(i);
     if(nb1<=0) break;
     //apply cuts
     if ( Proton->Cut(i) < 0) continue;
@@ -467,14 +472,14 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
     //read electron
     if(Electron)
     {
-      nb0 = Electron->fChain->GetEntry(i); 
+      nb0 = Electron->fChain->GetEntry(i);
       if(nb0<=0) break;
       //apply cuts
       if (Electron->Cut(i) < 0) continue;
       //apply trigger cuts
       if( Electron->Pvb < 0.3 )
       {
-	//continue;
+        //continue;
       }
     }
 
@@ -502,23 +507,23 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
 
     //by jixie: now I want to shift some tracks to create super events
     //one half will be shifted as 'early' the other half will be shifted 'late'
-    //the ShiftTDC will be uniformly distributed within [1, pMaxTDC-1] 
+    //the ShiftTDC will be uniformly distributed within [1, pMaxTDC-1]
     if(!(Index%ntrack_per_event)) pFoundGoodTrackInSuperEvent = 0;
-    if(ntrack_per_event>1) 
-    { 
+    if(ntrack_per_event>1)
+    {
       //maximum TDC value
-      int pMaxTDC = int(7000/NS_PER_TIC)-1;  
+      int pMaxTDC = int(7000/NS_PER_TIC)-1;
       // how many TIC should be shifted in average
-      double tmpN = pMaxTDC * 2.0 / ntrack_per_event; 
-      //how many extra TIC this track should be shifted? a value between 1 and tmpN, 
-      int tmpShift = rand() % int(ceil(tmpN)) + 1; 
+      double tmpN = pMaxTDC * 2.0 / ntrack_per_event;
+      //how many extra TIC this track should be shifted? a value between 1 and tmpN,
+      int tmpShift = rand() % int(ceil(tmpN)) + 1;
 
       int tureTrackIndex = int(ntrack_per_event/2.0) ;
-      if((Index%ntrack_per_event)>=tureTrackIndex && Proton->StepNum>30 && 
-	Proton->StepTL[Proton->StepNum-1]>RTPC_Anode_R-10.0 && !pFoundGoodTrackInSuperEvent ) 
+      if((Index%ntrack_per_event)>=tureTrackIndex && Proton->StepNum>30 &&
+         Proton->StepTL[Proton->StepNum-1]>RTPC_Anode_R-10.0 && !pFoundGoodTrackInSuperEvent )
       {
-	ShiftTDC = 0;
-	pFoundGoodTrackInSuperEvent = 1;
+        ShiftTDC = 0;
+        pFoundGoodTrackInSuperEvent = 1;
       }
       else ShiftTDC = -pMaxTDC + int((Index%ntrack_per_event) * tmpN) + tmpShift;
       if(ShiftTDC>pMaxTDC-1) ShiftTDC=pMaxTDC-1;
@@ -532,83 +537,83 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
     {
       //only take Drift region
       double tmpS = sqrt(Proton->StepX[ss]*Proton->StepX[ss]+
-	Proton->StepY[ss]*Proton->StepY[ss]);
+                     Proton->StepY[ss]*Proton->StepY[ss]);
       if(tmpS>RTPC_Cathode_R && tmpS<RTPC_Anode_R)
       {
-	if(Smin>tmpS) Smin=tmpS;
-	else if(Smax<tmpS) Smax=tmpS;
+        if(Smin>tmpS) Smin=tmpS;
+        else if(Smax<tmpS) Smax=tmpS;
 
-	SumBz += Proton->StepBz[ss];
-	if(Proton->StepL[ss]) SumdEdX += Proton->StepdE[ss]/Proton->StepL[ss];
+        SumBz += Proton->StepBz[ss];
+        if(Proton->StepL[ss]) SumdEdX += Proton->StepdE[ss]/Proton->StepL[ss];
 
-	double tmpPhi=atan2(Proton->StepY[ss],Proton->StepX[ss]);
-	StepX[HitNum]=Proton->StepX[ss];
-	StepY[HitNum]=Proton->StepY[ss];
-	StepZ[HitNum]=Proton->StepZ[ss];
-	StepS[HitNum]=tmpS;
-	StepPhi[HitNum]=tmpPhi;
-	StepdE[HitNum]=Proton->StepdE[ss];
-	StepL[HitNum]=Proton->StepL[ss];
+        double tmpPhi=atan2(Proton->StepY[ss],Proton->StepX[ss]);
+        StepX[HitNum]=Proton->StepX[ss];
+        StepY[HitNum]=Proton->StepY[ss];
+        StepZ[HitNum]=Proton->StepZ[ss];
+        StepS[HitNum]=tmpS;
+        StepPhi[HitNum]=tmpPhi;
+        StepdE[HitNum]=Proton->StepdE[ss];
+        StepL[HitNum]=Proton->StepL[ss];
 
-	bool bUseMagboltz=true;
-	if(!bUseMagboltz)
-	{
-	  //Now mimic the digitization and reconstruction of RTPC track
-	  //by smearing real hit location
-	  double tmpS_rec = tmpS + fGaus(0,pResS_p);
-	  double tmpPhi_rec = tmpPhi + fGaus(0,pResPh_p);
-	  double tmpZ_rec = StepZ[HitNum] + fGaus(0,pResZ_p);
+        bool bUseMagboltz=true;
+        if(!bUseMagboltz)
+        {
+          //Now mimic the digitization and reconstruction of RTPC track
+          //by smearing real hit location
+          double tmpS_rec = tmpS + fGaus(0,pResS_p);
+          double tmpPhi_rec = tmpPhi + fGaus(0,pResPh_p);
+          double tmpZ_rec = StepZ[HitNum] + fGaus(0,pResZ_p);
 
-	  StepX_rec[HitNum]=tmpS_rec*cos(tmpPhi_rec);
-	  StepY_rec[HitNum]=tmpS_rec*sin(tmpPhi_rec);
-	  StepZ_rec[HitNum]=tmpZ_rec;
-	  StepS_rec[HitNum]=tmpS_rec;
-	  StepPhi_rec[HitNum]=tmpPhi_rec;
-	}
-	else
-	{
-	  //now use magboltz drift path
-	  float xi=StepX[HitNum], yi=StepY[HitNum], zi=StepZ[HitNum];
-	  float dE=StepdE[HitNum];
+          StepX_rec[HitNum]=tmpS_rec*cos(tmpPhi_rec);
+          StepY_rec[HitNum]=tmpS_rec*sin(tmpPhi_rec);
+          StepZ_rec[HitNum]=tmpZ_rec;
+          StepS_rec[HitNum]=tmpS_rec;
+          StepPhi_rec[HitNum]=tmpPhi_rec;
+        }
+        else
+        {
+          //now use magboltz drift path
+          double xi=StepX[HitNum], yi=StepY[HitNum], zi=StepZ[HitNum];
+          double dE=StepdE[HitNum];
 
-	  int n_rec=0;
-	  float xo[4],yo[4],zo[4];
-	  int chan[4],tdc[4],adc[4];
-	  gEsim->DriftESim(xi,yi,zi,dE,n_rec,xo,yo,zo,chan,tdc,adc);
+          int n_rec=0;
+          double xo[4],yo[4],zo[4];
+          int chan[4],tdc[4],adc[4];
+          gEsim->DriftESim(xi,yi,zi,dE,n_rec,xo,yo,zo,chan,tdc,adc);
 
-	  StepID[HitNum]=chan[0];
-	  StepTDC[HitNum]=tdc[0];
-	  StepADC[HitNum]=adc[0];
-	  for(int t=1;t<n_rec;t++) StepADC[HitNum] += adc[t]; 
+          StepID[HitNum]=chan[0];
+          StepTDC[HitNum]=tdc[0];
+          StepADC[HitNum]=adc[0];
+          for(int t=1;t<n_rec;t++) StepADC[HitNum] += adc[t];
 
-	  for(int t=0;chan[t]>0 && t<n_rec;t++) 
-	  {
-	    //by jixie: now I want to shift some tracks to create super events
-	    if(ntrack_per_event>1) 
-	    {
-	      tdc[t] += ShiftTDC*NS_PER_TIC;
-	      if(tdc[t]<0) continue;
-	      gEsim->LookupXYZByIDTDC(chan[t],tdc[t],xo[t],yo[t],zo[t]);
-	      double tmpSS = sqrt(xo[t]*xo[t]+yo[t]*yo[t]);
-	      if(tmpSS<RTPC_Cathode_R-10.0 || tmpSS>RTPC_Anode_R+10.0) continue;
-	    }
+          for(int t=0;chan[t]>0 && t<n_rec;t++)
+          {
+            //by jixie: now I want to shift some tracks to create super events
+            if(ntrack_per_event>1)
+            {
+              tdc[t] += ShiftTDC*NS_PER_TIC;
+              if(tdc[t]<0) continue;
+              gEsim->LookupXYZByIDTDC(chan[t],tdc[t],xo[t],yo[t],zo[t]);
+              double tmpSS = sqrt(xo[t]*xo[t]+yo[t]*yo[t]);
+              if(tmpSS<RTPC_Cathode_R-10.0 || tmpSS>RTPC_Anode_R+10.0) continue;
+            }
 
-	    StepID_rec[HitNum_rec]=chan[t];
-	    StepTDC_rec[HitNum_rec]=tdc[t];
-	    StepADC_rec[HitNum_rec]=adc[t];
-	    StepX_rec[HitNum_rec]=xo[t];
-	    StepY_rec[HitNum_rec]=yo[t];
-	    StepZ_rec[HitNum_rec]=zo[t];
-	    StepPhi_rec[HitNum_rec]=atan2(yo[t],xo[t]);
-	    StepS_rec[HitNum_rec]=sqrt(xo[t]*xo[t]+yo[t]*yo[t]);
+            StepID_rec[HitNum_rec]=chan[t];
+            StepTDC_rec[HitNum_rec]=tdc[t];
+            StepADC_rec[HitNum_rec]=adc[t];
+            StepX_rec[HitNum_rec]=xo[t];
+            StepY_rec[HitNum_rec]=yo[t];
+            StepZ_rec[HitNum_rec]=zo[t];
+            StepPhi_rec[HitNum_rec]=atan2(yo[t],xo[t]);
+            StepS_rec[HitNum_rec]=sqrt(xo[t]*xo[t]+yo[t]*yo[t]);
 
-	    HitNum_rec++;
-	    if(HitNum_rec>=MaxHit_rec) break;
-	  }
-	}
+            HitNum_rec++;
+            if(HitNum_rec>=MaxHit_rec) break;
+          }
+        }
 
-	HitNum++;
-	if(HitNum>=MaxHit) break;
+        HitNum++;
+        if(HitNum>=MaxHit) break;
       }
     }
     MeanBz = (HitNum>0) ? SumBz/HitNum : 0;
@@ -622,13 +627,13 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
       int found=0;
       for(int tt=HitNum_m-1;tt>=0;tt--)
       {
-	if(StepID_rec[ss]==StepID_m[tt] && StepTDC_rec[ss]==StepTDC_m[tt])  
-	{
-	  StepADC_m[tt]+=StepADC_rec[ss];
-	  found=1;
-	  //cout<<"\t Merge ADC of _rec point="<<ss<<" to _m point="<<tt<<", HitNum_m="<<HitNum_m<<endl;
-	  break;
-	}
+        if(StepID_rec[ss]==StepID_m[tt] && StepTDC_rec[ss]==StepTDC_m[tt])
+        {
+          StepADC_m[tt]+=StepADC_rec[ss];
+          found=1;
+          //cout<<"\t Merge ADC of _rec point="<<ss<<" to _m point="<<tt<<", HitNum_m="<<HitNum_m<<endl;
+          break;
+        }
       }
       if(found) continue;
       //keep only those valid reconstruction
@@ -649,10 +654,10 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
     if(HitNum_m>5)
     {
       FitATrack(HitNum,StepX,StepY,StepZ,R_sim,A_sim,B_sim,Phi_sim,
-	Theta_sim,Z_sim,RTPC_Cathode_R+0.1,RTPC_Anode_R-0.1);
+              Theta_sim,Z_sim,RTPC_Cathode_R+0.1,RTPC_Anode_R-0.1);
       DCA_sim=sqrt(A_sim*A_sim+B_sim*B_sim)-R_sim;
       FitATrack(HitNum_m,StepX_rec_m,StepY_rec_m,StepZ_rec_m,R_rec,A_rec,B_rec,
-	Phi_rec,Theta_rec,Z_rec,RTPC_Cathode_R+0.1,RTPC_Anode_R-0.1);
+              Phi_rec,Theta_rec,Z_rec,RTPC_Cathode_R+0.1,RTPC_Anode_R-0.1);
       DCA_rec=sqrt(A_rec*A_rec+B_rec*B_rec)-R_rec;
     }
 
@@ -673,8 +678,8 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
     h2D_TF_p->Fill(Phi0_p,Theta0_p);
     h2D_PF_p->Fill(Phi0_p,P0_p);
     //get reconstructed information
-    if(fabs(1.0-P0_rec_p/P0_p)<0.1 && fabs(Z0-Z0_rec_p)<15 && 
-      fabs(Theta0_p-Theta0_rec_p)<0.05 && fabs(Phi0_p-Phi0_rec_p)<0.05)
+    if(fabs(1.0-P0_rec_p/P0_p)<0.1 && fabs(Z0-Z0_rec_p)<15 &&
+     fabs(Theta0_p-Theta0_rec_p)<0.05 && fabs(Phi0_p-Phi0_rec_p)<0.05)
     {
       h3N_p->Fill(Phi0_p,Theta0_p,P0_p);
       h2N_PT_p->Fill(Theta0_p,P0_p);
@@ -684,11 +689,11 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
 
     //fill threshold histogram
     double Theta_p_min = atan((RTPC_Cathode_R+5)/(RTPC_Length/2-Z0));
-    if(Smax<RTPC_Cathode_R+10 && Theta0_p>Theta_p_min && Smax>StepS[HitNum-1]) 
+    if(Smax<RTPC_Cathode_R+10 && Theta0_p>Theta_p_min && Smax>StepS[HitNum-1])
     {
       h2Thre_C->Fill(Theta0_p/deg-90,P0_p*1000);
     }
-    if(Smax>RTPC_Anode_R-5 && Smax>StepS[HitNum-1])	
+    if(Smax>RTPC_Anode_R-5 && Smax>StepS[HitNum-1])
     {
       h2Thre_A->Fill(Theta0_p/deg-90,P0_p*1000);
     }
@@ -710,17 +715,17 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
       XS_e = 0;
       if(Electron->Pvb>0.3)
       {
-	//need to call P.Bosted XS
-	XS_e = Electron->ElasXS;
+        //need to call P.Bosted XS
+        XS_e = Electron->ElasXS;
       }
 
-      //reconstruct the electron	
+      //reconstruct the electron
       Theta0_rec_e=Theta0_e+fGaus(0.0,pResTh_e);
       Phi0_rec_e=Phi0_e+fGaus(0.0,pResPh_e/sin(Theta0_e));
       P0_rec_e=P0_e*fGaus(1.0,pResP_e);
       X0_rec_e = X0 + fGaus(0.0,pResBPM);
       Y0_rec_e = Y0 + fGaus(0.0,pResBPM);
-      Z0_rec_e = Z0 + fGaus(0.0,pResZ_e); 
+      Z0_rec_e = Z0 + fGaus(0.0,pResZ_e);
 
 
       //get thrown information
@@ -731,36 +736,36 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
       //get reconstructed information
       if(Electron->Pvb>0.3)
       {
-	h3N->Fill(Phi0_e,Theta0_e,P0_e);
-	h2N_PT->Fill(Theta0_e,P0_e);
-	h2N_TF->Fill(Phi0_e,Theta0_e);
-	h2N_PF->Fill(Phi0_e,P0_e);
+        h3N->Fill(Phi0_e,Theta0_e,P0_e);
+        h2N_PT->Fill(Theta0_e,P0_e);
+        h2N_TF->Fill(Phi0_e,Theta0_e);
+        h2N_PF->Fill(Phi0_e,P0_e);
       }
     }
 
     ///////////////////////////////////////////////
-    //write out raw date file to run MulDFit 
-    if(HitNum>10 && fabs(1.0-P0_rec_p/P0_p)<0.1 && fabs(Z0-Z0_rec_p)<15 && 
-      fabs(Theta0_p-Theta0_rec_p)<0.05 && fabs(Phi0_p-Phi0_rec_p)<0.05 && 
-      DCA_sim<3) 
+    //write out raw date file to run MulDFit
+    if(HitNum>10 && fabs(1.0-P0_rec_p/P0_p)<0.1 && fabs(Z0-Z0_rec_p)<15 &&
+     fabs(Theta0_p-Theta0_rec_p)<0.05 && fabs(Phi0_p-Phi0_rec_p)<0.05 &&
+     DCA_sim<3)
     {
-      double weight = 1.0/(fabs(sqrt(A_sim*A_sim+B_sim*B_sim)-R_sim)/0.2+0.1); 
+      double weight = 1.0/(fabs(sqrt(A_sim*A_sim+B_sim*B_sim)-R_sim)/0.2+0.1);
       weight=1.0;
       foutP<<setw(13)<<P0_p*sin(Theta0_p)<<" "
-	<<setw(13)<<R_rec<<" "<<setw(13)<<cos(Theta_rec)<<" "<<setw(13)<<Phi_rec<<" "
-	<<setw(13)<<Z_rec<<" "<<setw(13)<<DCA_rec<<" "<<setw(13)<<weight<<endl;
+           <<setw(13)<<R_rec<<" "<<setw(13)<<cos(Theta_rec)<<" "<<setw(13)<<Phi_rec<<" "
+           <<setw(13)<<Z_rec<<" "<<setw(13)<<DCA_rec<<" "<<setw(13)<<weight<<endl;
 
       foutTh<<setw(13)<<cos(Theta0_p)<<" "
-	<<setw(13)<<R_rec<<" "<<setw(13)<<cos(Theta_rec)<<" "<<setw(13)<<Phi_rec<<" "
-	<<setw(13)<<Z_rec<<" "<<setw(13)<<DCA_rec<<" "<<setw(13)<<weight<<endl;
+          <<setw(13)<<R_rec<<" "<<setw(13)<<cos(Theta_rec)<<" "<<setw(13)<<Phi_rec<<" "
+          <<setw(13)<<Z_rec<<" "<<setw(13)<<DCA_rec<<" "<<setw(13)<<weight<<endl;
 
       foutPh<<setw(13)<<Phi0_p<<" "
-	<<setw(13)<<R_rec<<" "<<setw(13)<<cos(Theta_rec)<<" "<<setw(13)<<Phi_rec<<" "
-	<<setw(13)<<Z_rec<<" "<<setw(13)<<DCA_rec<<" "<<setw(13)<<weight<<endl;
+          <<setw(13)<<R_rec<<" "<<setw(13)<<cos(Theta_rec)<<" "<<setw(13)<<Phi_rec<<" "
+          <<setw(13)<<Z_rec<<" "<<setw(13)<<DCA_rec<<" "<<setw(13)<<weight<<endl;
 
       foutZ<<setw(13)<<Z0<<" "
-	<<setw(13)<<R_rec<<" "<<setw(13)<<cos(Theta_rec)<<" "<<setw(13)<<Phi_rec<<" "
-	<<setw(13)<<Z_rec<<" "<<setw(13)<<DCA_rec<<" "<<setw(13)<<weight<<endl;
+           <<setw(13)<<R_rec<<" "<<setw(13)<<cos(Theta_rec)<<" "<<setw(13)<<Phi_rec<<" "
+           <<setw(13)<<Z_rec<<" "<<setw(13)<<DCA_rec<<" "<<setw(13)<<weight<<endl;
     }
 
     ///////////////////////////////////////////////
@@ -781,14 +786,14 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
   }
 
   TCanvas *c14 = new TCanvas("c14","RTPC Pr Threshold",800,600);
-  c14->cd(0); 
+  c14->cd(0);
   h2Thre_C->Draw("");
   h2Thre_C->Fit("pol6");
   c14->Modified();
   c14->SaveAs(Form("Graph/PrThre_Cathode_%s.png","RTPC12"));
 
   TCanvas *c4 = new TCanvas("c4","RTPC Pr Threshold",800,600);
-  c4->cd(0); 
+  c4->cd(0);
   h2Thre_A->Draw("*");
   h2Thre_A->Fit("pol6");
   c4->Modified();
@@ -807,46 +812,46 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
   pFileAcc->cd();
 
   if(Electron)
-  {
-    TCanvas *c2 = new TCanvas("c2","e- acceptance",900,700);
-    TH3F *h3Acc = (TH3F*) h3N->Clone("h3Acc_PTF");
-    h3Acc->SetTitle("e^{-} Acceptance");
-    h3Acc->Divide(h3D);
-    h3Acc->Scale(100.0);
+    {
+      TCanvas *c2 = new TCanvas("c2","e- acceptance",900,700);
+      TH3F *h3Acc = (TH3F*) h3N->Clone("h3Acc_PTF");
+      h3Acc->SetTitle("e^{-} Acceptance");
+      h3Acc->Divide(h3D);
+      h3Acc->Scale(100.0);
 
-    TH2F *h2Acc_PT = (TH2F*) h2N_PT->Clone("h2Acc_PT");
-    h2Acc_PT->SetTitle("e^{-} Acceptance");
-    h2Acc_PT->Divide(h2D_PT);
-    h2Acc_PT->Scale(100.0);
+      TH2F *h2Acc_PT = (TH2F*) h2N_PT->Clone("h2Acc_PT");
+      h2Acc_PT->SetTitle("e^{-} Acceptance");
+      h2Acc_PT->Divide(h2D_PT);
+      h2Acc_PT->Scale(100.0);
 
-    TH2F *h2Acc_TF = (TH2F*) h2N_TF->Clone("h2Acc_TF");
-    h2Acc_TF->SetTitle("e^{-} Acceptance");
-    h2Acc_TF->Divide(h2D_TF);
-    h2Acc_TF->Scale(100.0);
+      TH2F *h2Acc_TF = (TH2F*) h2N_TF->Clone("h2Acc_TF");
+      h2Acc_TF->SetTitle("e^{-} Acceptance");
+      h2Acc_TF->Divide(h2D_TF);
+      h2Acc_TF->Scale(100.0);
 
-    TH2F *h2Acc_PF = (TH2F*) h2N_PF->Clone("h2Acc_PF");
-    h2Acc_PF->SetTitle("e^{-} Acceptance");
-    h2Acc_PF->Divide(h2D_PF);
-    h2Acc_PF->Scale(100.0);
+      TH2F *h2Acc_PF = (TH2F*) h2N_PF->Clone("h2Acc_PF");
+      h2Acc_PF->SetTitle("e^{-} Acceptance");
+      h2Acc_PF->Divide(h2D_PF);
+      h2Acc_PF->Scale(100.0);
 
-    c2->Divide(2,2);
-    c2->cd(1);      
-    h2Acc_PT->Draw("colz text");
-    c2->cd(2);      
-    h2Acc_TF->Draw("colz text");
-    c2->cd(3);      
-    h2Acc_PF->Draw("colz text");
+      c2->Divide(2,2);
+      c2->cd(1);
+      h2Acc_PT->Draw("colz text");
+      c2->cd(2);
+      h2Acc_TF->Draw("colz text");
+      c2->cd(3);
+      h2Acc_PF->Draw("colz text");
 
-    c2->cd(4);
-    h3Acc->Draw();
+      c2->cd(4);
+      h3Acc->Draw();
 
-    c2->Modified();
-    c2->SaveAs(Form("Graph/ElAcc_%s.png","CLAS12"));
+      c2->Modified();
+      c2->SaveAs(Form("Graph/ElAcc_%s.png","CLAS12"));
 
-    //DoAcc(pKey,pTree);
-    PrintAcc(h3Acc,h3N,3,1);
-    h3Acc->Write("", TObject::kOverwrite); 
-  }
+      //DoAcc(pKey,pTree);
+      PrintAcc(h3Acc,h3N,3,1);
+      h3Acc->Write("", TObject::kOverwrite);
+    }
 
 
   TCanvas *c3 = new TCanvas("c3","e- acceptance",900,700);
@@ -871,11 +876,11 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
   h2Acc_PF_p->Scale(100.0);
 
   c3->Divide(2,2);
-  c3->cd(1);      
+  c3->cd(1);
   h2Acc_PT_p->Draw("colz text");
-  c3->cd(2);      
+  c3->cd(2);
   h2Acc_TF_p->Draw("colz text");
-  c3->cd(3);      
+  c3->cd(3);
   h2Acc_PF_p->Draw("colz text");
 
   c3->cd(4);
@@ -886,7 +891,7 @@ void CreateRTPCSuperEvent(const char *infile="nt.root", const char *outfile="nt_
 
   //DoAcc(pKey,pTree);
   PrintAcc(h3Acc_p,h3N_p,3,1);
-  h3Acc_p->Write("", TObject::kOverwrite); 
+  h3Acc_p->Write("", TObject::kOverwrite);
 
 
   pFileAcc->Write("", TObject::kOverwrite);

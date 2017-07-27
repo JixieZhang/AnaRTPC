@@ -13,11 +13,13 @@
 
 ///////////////////////////Constant Array Definitions///////////////////////////////
 //Each connector has 16 channels, which are connected to 4x4 pads
-//Each Pad is 4mm(z) x 2.7mm(phi), pads are 4 mil separated in z and 1.5mil in phi
+//Each Pad is 4mm(z) x 2.7mm(phi), pads are 4 mil separated in z and 4mil in phi
+//07/25/2017: got confirm from Chris Cuevas that the gap in phi direction is also 4 mil
+//Assuming 
 //Basic Assumption:
 //1) The connector col index increases along z, row index increases along phi 
-//2) Pads are separated in phi by 1.5 mil? need to verify 
-//3) Zoffsets({ 1.8, 1.2, 0.6, 0}) need to verify
+//2) Zoffsets({ 1.8, 1.2, 0.6, 0}) need to verify
+//3) row 0 connects to the connector that connected to pad_id==0
 /**********************************************************************************/
 //Note that we have to verify 1) with DAQ to make sure it is written in this way!
 /**********************************************************************************/
@@ -215,6 +217,7 @@ double  ChannelMap::GetPhi(int pChan)
 //return the Phi angle in rad and z in mm
 void  ChannelMap::GetZPhi(int pChan, double &z_mm, double &phi_rad)
 {
+  z_mm = phi_rad = -99999.;
 	if(pChan<0 || pChan>=NUM_PADS) return;
 	z_mm = fZPhiMap[pChan][0];
 	phi_rad = fZPhiMap[pChan][1];

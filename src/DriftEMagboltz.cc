@@ -29,7 +29,7 @@ Magboltz simulation provide the following functions:
 //#define HeDME   1 //the drift gas: HeDME or ArCO2
 
 ////////////////////////
-#define DRIFTESIM_DEBUG 1
+//#define DRIFTESIM_DEBUG 1
 ////////////////////////
 
 #include "math.h"
@@ -37,9 +37,12 @@ Magboltz simulation provide the following functions:
 
 
 //////////////////////////////////////////////////////////////////////////////////////
-DriftEMagboltz::DriftEMagboltz(float R_He2DME, float pad_w, float pad_l, float pad_s,
-  float rtpc_l) : Ratio_He2DME(R_He2DME),PAD_W(pad_w),PAD_L(pad_l),PAD_S(pad_s),RTPC_L(rtpc_l)
+DriftEMagboltz::DriftEMagboltz(double R_He2DME, double pad_w, double pad_l, double pad_s,
+  double rtpc_l) : Ratio_He2DME(R_He2DME),PAD_W(pad_w),PAD_L(pad_l),PAD_S(pad_s),RTPC_L(rtpc_l)
 {
+  //fChanMap = new ChannelMap(2.8016,4.1016,80.42,0);
+  fChanMap = new ChannelMap(pad_w,pad_l,pad_s,0);
+  
   Kev2ADC=50.0;	 //set to 50.0, so 1 adc unit = 20 ev
 
   //TPC_TZERO is used to indicate how long in time the DAQ will read ahead of trigger. in ns unit
@@ -55,20 +58,20 @@ DriftEMagboltz::DriftEMagboltz(float R_He2DME, float pad_w, float pad_l, float p
 //////////////////////////////////////////////////////////////////////////////////////
 DriftEMagboltz::~DriftEMagboltz()
 {
-  ;
+  delete fChanMap;
 }
 
 //boxmuller gauss number generator
 //input: mean m, standard deviation s 
 double DriftEMagboltz::Gauss(double m, double s)	
-{				        
+{
 	if(s==0.0) return m;
 
 	double x1, x2, w, y1;
 	static double y2;
 	static int use_last = 0;
 
-	if (use_last)		        /* use value from previous call */
+	if (use_last)	 /* use value from previous call */
 	{
 		y1 = y2;
 		use_last = 0;
@@ -91,63 +94,63 @@ double DriftEMagboltz::Gauss(double m, double s)
 }
 
 //get drift time by s
-float DriftEMagboltz::GetT_s2gem1(float s0_mm,float z0)
+double DriftEMagboltz::GetT_s2gem1(double s0_mm,double z0)
 {
   z0+=0;
 #if defined HeDME
-  float s0=s0_mm/10.;
-  float t_us=0.0; 
-  float a=-0.1642, b=-0.0947,c=8.8001;
+  double s0=s0_mm/10.;
+  double t_us=0.0; 
+  double a=-0.1642, b=-0.0947,c=8.8001;
   t_us = a*s0*s0+b*s0+c;
   return t_us*1000.;
 #else
-  float s2gem=(PAD_S-10.0)/10.-s0_mm/10.;
-  float a_t=1741.179712, b_t=-1.25E+02;
-  float c_t=388.7449859, d_t=-4.33E+01;
+  double s2gem=(PAD_S-10.0)/10.-s0_mm/10.;
+  double a_t=1741.179712, b_t=-1.25E+02;
+  double c_t=388.7449859, d_t=-4.33E+01;
   // calculate drift time [ns] to first GEM
-  float t_drift = a_t*s2gem+b_t*s2gem*s2gem;
+  double t_drift = a_t*s2gem+b_t*s2gem*s2gem;
     return t_drift;
   
   // determine sigma of drift time [ns]
-  float t_diff = sqrt(c_t*s2gem+d_t*s2gem*s2gem);
+  double t_diff = sqrt(c_t*s2gem+d_t*s2gem*s2gem);
   return Gauss(t_drift,t_diff);
 #endif
 }
 
 //get time offset from 1st gem to pad
-float DriftEMagboltz::GetT_gem2pad(float z0)
+double DriftEMagboltz::GetT_gem2pad(double z0)
 {
 #if defined HeDME
   //Assume A) gem1 to pad is 10mm,  B) the time to travel from gem1 to pad
   //equal to that it drifts 10cm to gem1
   return GetT_s2gem1(PAD_S-20.0,z0);
 #else
-  float t_2GEM2 = 296.082;
-  float sigma_t_2GEM2 = 8.72728;
-  float t_2GEM3 = 296.131;
-  float sigma_t_2GEM3 = 6.77807;
-  float t_2PAD = 399.09;
-  float sigma_t_2PAD = 7.58056;
-  float t_2END = t_2GEM2 + t_2GEM3 + t_2PAD;
+  double t_2GEM2 = 296.082;
+  double sigma_t_2GEM2 = 8.72728;
+  double t_2GEM3 = 296.131;
+  double sigma_t_2GEM3 = 6.77807;
+  double t_2PAD = 399.09;
+  double sigma_t_2PAD = 7.58056;
+  double t_2END = t_2GEM2 + t_2GEM3 + t_2PAD;
   return t_2END;
-  float sigma_t_gap = sqrt(pow(sigma_t_2GEM2,2)+pow(sigma_t_2GEM3,2)+pow(sigma_t_2PAD,2));
+  double sigma_t_gap = sqrt(pow(sigma_t_2GEM2,2)+pow(sigma_t_2GEM3,2)+pow(sigma_t_2PAD,2));
   return Gauss(t_2END,sigma_t_gap);
 #endif
 }
 
 //get dphi by s
-float DriftEMagboltz::GetdPhi_s2gem1(float s0_mm,float z0)
+double DriftEMagboltz::GetdPhi_s2gem1(double s0_mm,double z0)
 {
   z0+=0;
 #if defined HeDME
-  float s0=s0_mm/10.;
-  float a=0.0287, b=-0.5334, c=2.3475;
-  float dphi=a*s0*s0+b*s0+c;
+  double s0=s0_mm/10.;
+  double a=0.0287, b=-0.5334, c=2.3475;
+  double dphi=a*s0*s0+b*s0+c;
   return dphi;
 #else
-  float s2gem=(PAD_S-10.0)/10.-s0_mm/10.;
-  float a_phi=0.161689123, b_phi=0.023505021;
-  float c_phi=6.00E-06,d_phi=2.00E-06;
+  double s2gem=(PAD_S-10.0)/10.-s0_mm/10.;
+  double a_phi=0.161689123, b_phi=0.023505021;
+  double c_phi=6.00E-06,d_phi=2.00E-06;
   // calculate drift angle to first GEM at 7 cm [rad]
   double phi_drift = a_phi*s2gem+b_phi*s2gem*s2gem;
   return phi_drift;
@@ -158,44 +161,44 @@ float DriftEMagboltz::GetdPhi_s2gem1(float s0_mm,float z0)
 }
 
 //get dphi offset from 1st gem to pad
-float DriftEMagboltz::GetdPhi_gem2pad(float z0)
+double DriftEMagboltz::GetdPhi_gem2pad(double z0)
 {
 #if defined HeDME
   //Assume A) gem1 to pad is 10mm,  B) the phi deflection from gem1 to pad
   //equal to that to it drifts 10cm to gem1
   return GetdPhi_s2gem1(PAD_S-20.0,z0);
 #else
-  float phi_2GEM2 = 0.0492538;
-  float sigma_phi_2GEM2 = 0.00384579;
-  float phi_2GEM3 = 0.0470817;
-  float sigma_phi_2GEM3 = 0.00234478;
-  float phi_2PAD = 0.0612122;
-  float sigma_phi_2PAD = 0.00238653;
-  float phi_2END = phi_2GEM2 + phi_2GEM3 + phi_2PAD;
+  double phi_2GEM2 = 0.0492538;
+  double sigma_phi_2GEM2 = 0.00384579;
+  double phi_2GEM3 = 0.0470817;
+  double sigma_phi_2GEM3 = 0.00234478;
+  double phi_2PAD = 0.0612122;
+  double sigma_phi_2PAD = 0.00238653;
+  double phi_2END = phi_2GEM2 + phi_2GEM3 + phi_2PAD;
   return phi_2END;
-  float sigma_phi_gap = sqrt(pow(sigma_phi_2GEM2,2)+pow(sigma_phi_2GEM3,2)+pow(sigma_phi_2PAD,2));
+  double sigma_phi_gap = sqrt(pow(sigma_phi_2GEM2,2)+pow(sigma_phi_2GEM3,2)+pow(sigma_phi_2PAD,2));
   return Gauss(phi_2END,sigma_phi_gap);
 #endif
 }
 
 //reconstruct s by drifting time
 //return negative s if error
-float DriftEMagboltz::GetSByT(float t_s2gem1,float z0)
+double DriftEMagboltz::GetSByT(double t_s2gem1,double z0)
 {
   z0+=0;
-  float s_r=-10;
+  double s_r=-10;
 #if defined HeDME
-  float t_us=t_s2gem1/1000.;
-  float a=-0.0335, b=-0.3208,c=6.9481;
+  double t_us=t_s2gem1/1000.;
+  double a=-0.0335, b=-0.3208,c=6.9481;
   s_r = a*t_us*t_us+b*t_us+c;   //in cm
   s_r*=10;   //turn s_r from cm to mm
 #else
-  //float a_t=1741.179712, b_t=-1.25E+02;
+  //double a_t=1741.179712, b_t=-1.25E+02;
   // calculate starting s0 using "the drift time [ns] from s0 to the first GEM"
-  //float s2gem=(PAD_S-10.0)/10.-s0_mm/10.;  //in cm
-  //float t_drift = a_t*s2gem+b_t*s2gem*s2gem;
-  float b=1741.179712, a=-1.25E+02;
-  float s2gem = (sqrt(b*b+4*a*t_s2gem1)-b)/(2*a);  //in cm
+  //double s2gem=(PAD_S-10.0)/10.-s0_mm/10.;  //in cm
+  //double t_drift = a_t*s2gem+b_t*s2gem*s2gem;
+  double b=1741.179712, a=-1.25E+02;
+  double s2gem = (sqrt(b*b+4*a*t_s2gem1)-b)/(2*a);  //in cm
   s_r = PAD_S-10.0 - s2gem*10;
 #endif
 
@@ -209,15 +212,15 @@ float DriftEMagboltz::GetSByT(float t_s2gem1,float z0)
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
-float DriftEMagboltz::GetS_r(float z_pad, float phi_pad, float t_s2pad)
+double DriftEMagboltz::GetS_r(double z_pad, double phi_pad, double t_s2pad)
 {
   //input z_pad in mm, phi_pad in rad, t_s2pad in ns
   //output: s0_r, the radius in mm
-  float s_r=-10.0;
+  double s_r=-10.0;
   phi_pad += 0.0;  //to avoid warning
 
   //determine drift time from ionization location to gem1
-  float t_s2gem1 = t_s2pad - GetT_gem2pad(z_pad);;
+  double t_s2gem1 = t_s2pad - GetT_gem2pad(z_pad);;
 
   //This part is the reverse function, in mm
   s_r = GetSByT(t_s2gem1,z_pad);  
@@ -234,19 +237,19 @@ float DriftEMagboltz::GetS_r(float z_pad, float phi_pad, float t_s2pad)
 
 
 //////////////////////////////////////////////////////////////////////////////////////
-float DriftEMagboltz::GetPhi_r(float z_pad, float phi_pad, float t_s2pad)
+double DriftEMagboltz::GetPhi_r(double z_pad, double phi_pad, double t_s2pad)
 {
   //input: z_pad in mm, phi_pad in rad, t_s2pad in ns
   //output: phi0_r in rad
 
   //since we do not have the function of dphi(t), we need to get S_r first
   //then use s the get total dphi
-  float s_r = GetS_r(z_pad, phi_pad, t_s2pad);
+  double s_r = GetS_r(z_pad, phi_pad, t_s2pad);
 
   //calculate dphi
-  float delta_phi = GetdPhi_s2gem1(s_r, z_pad) + GetdPhi_gem2pad(z_pad);
+  double delta_phi = GetdPhi_s2gem1(s_r, z_pad) + GetdPhi_gem2pad(z_pad);
 
-  float phi_r = phi_pad + delta_phi;
+  double phi_r = phi_pad + delta_phi;
   if( phi_r < 0 ) phi_r += 2*PI;
   if( phi_r > 2*PI ) phi_r -= 2*PI;
 
@@ -262,7 +265,7 @@ float DriftEMagboltz::GetPhi_r(float z_pad, float phi_pad, float t_s2pad)
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
-int DriftEMagboltz::GetSPhi_r(float z_pad, float phi_pad, float t_s2pad, float &s_r, float &phi_r)
+int DriftEMagboltz::GetSPhi_r(double z_pad, double phi_pad, double t_s2pad, double &s_r, double &phi_r)
 {
   //input: z_pad in mm, phi_pad in rad, t_s2pad in ns
   //output: phi0_r in rad
@@ -271,9 +274,9 @@ int DriftEMagboltz::GetSPhi_r(float z_pad, float phi_pad, float t_s2pad, float &
   s_r = GetS_r(z_pad, phi_pad, t_s2pad);
 
   //calculate total dphi using S_r
-  float dphi_gem2pad = GetdPhi_gem2pad(z_pad);
-  float dphi_s2gem1=GetdPhi_s2gem1(s_r, z_pad);
-  float delta_phi = dphi_s2gem1 + dphi_gem2pad;
+  double dphi_gem2pad = GetdPhi_gem2pad(z_pad);
+  double dphi_s2gem1=GetdPhi_s2gem1(s_r, z_pad);
+  double delta_phi = dphi_s2gem1 + dphi_gem2pad;
 
   phi_r = phi_pad + delta_phi;
   if( phi_r < 0 ) phi_r += 2*PI;
@@ -298,38 +301,41 @@ int DriftEMagboltz::GetSPhi_r(float z_pad, float phi_pad, float t_s2pad, float &
 
 //////////////////////////////////////////////////////////////////////////////////////
 //input Phi angle in rad, from 0 to 2pi
-int DriftEMagboltz::GetChanId(float z0, float phi_rad)
+int DriftEMagboltz::GetChanId(double z0, double phi_rad)
 {
-  //need to fill this routine when the readout pad pattern is ready
-  //row shifting in z : 
-  //row 0|1|2|3: 0|1|2|3 mm
-  float phi_per_pad = PAD_W/PAD_S;
-  int row = int(phi_rad/phi_per_pad);
-  float z_shift = row%4;
-  float z_start=z_shift-RTPC_L/2;
-  float z_end=z_shift+RTPC_L/2;
-  if(z0<z_start+0.01) return -10;
-  else if(z0>z_end-0.01) return -9;
-  int col = int((z0-z_shift+RTPC_L/2)/PAD_L);
-  int Num_of_Col = int(ceil(RTPC_L/PAD_L));
-  return row*Num_of_Col+col;
+  return fChanMap->GetPadID(z0,phi_rad);
+  ////need to fill this routine when the readout pad pattern is ready
+  ////row shifting in z : 
+  ////row 0|1|2|3: 0|1|2|3 mm
+  //double phi_per_pad = PAD_W/PAD_S;
+  //int row = int(phi_rad/phi_per_pad);
+  //double z_shift = row%4;
+  //double z_start=z_shift-RTPC_L/2;
+  //double z_end=z_shift+RTPC_L/2;
+  //if(z0<z_start+0.01) return -10;
+  //else if(z0>z_end-0.01) return -9;
+  //int col = int((z0-z_shift+RTPC_L/2)/PAD_L);
+  //int Num_of_Col = int(ceil(RTPC_L/PAD_L));
+  //return row*Num_of_Col+col;
 }
 
-int DriftEMagboltz::GetChanZPhi(int chan, float &z, float &phi)
+int DriftEMagboltz::GetChanZPhi(int chan, double &z, double &phi)
 {
-  //need to fill this routine when the readout pad pattern is ready
-  float phi_per_pad = PAD_W/PAD_S;
-  int Num_of_Col = int(ceil(RTPC_L/PAD_L));
-  int row=chan/Num_of_Col;
-  int col=chan%Num_of_Col; 
-  float z_shift = row%4;
-  z=(col+0.5)*PAD_L-RTPC_L/2+z_shift ;
-  phi=(row+0.5)*phi_per_pad;
+  fChanMap->GetZPhi(chan,z,phi);
   return 0;
+  ////need to fill this routine when the readout pad pattern is ready
+  //double phi_per_pad = PAD_W/PAD_S;
+  //int Num_of_Col = int(ceil(RTPC_L/PAD_L));
+  //int row=chan/Num_of_Col;
+  //int col=chan%Num_of_Col; 
+  //double z_shift = row%4;
+  //z=(col+0.5)*PAD_L-RTPC_L/2+z_shift ;
+  //phi=(row+0.5)*phi_per_pad;
+  //return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
-int DriftEMagboltz::DriftEl2Pad(float x0,float y0,float z0,float dE_kev,
+int DriftEMagboltz::DriftEl2Pad(double x0,double y0,double z0,double dE_kev,
   int& chan,int& tdc,int& adc)
 {
   //input:
@@ -340,7 +346,7 @@ int DriftEMagboltz::DriftEl2Pad(float x0,float y0,float z0,float dE_kev,
   //reset the values
   chan=-10;  tdc=-1;  adc=-1;
 
-  float r0,phi0_rad;
+  double r0,phi0_rad;
   //convert (x0,y0,z0) into (r0,phi0,z0)
   r0=sqrt(x0*x0+y0*y0);  //in mm
   phi0_rad=atan2(y0,x0); //return (-Pi, + Pi)
@@ -355,9 +361,9 @@ int DriftEMagboltz::DriftEl2Pad(float x0,float y0,float z0,float dE_kev,
 #endif
 
   //determine drift_time
-  float t_gem2pad = GetT_gem2pad(z0);
-  float t_s2gem1 = GetT_s2gem1(r0, z0);
-  float t_s2pad = t_s2gem1 + t_gem2pad;
+  double t_gem2pad = GetT_gem2pad(z0);
+  double t_s2gem1 = GetT_s2gem1(r0, z0);
+  double t_s2pad = t_s2gem1 + t_gem2pad;
 
 #ifdef DRIFTESIM_DEBUG
   if( DRIFTESIM_DEBUG>=3 )
@@ -368,9 +374,9 @@ int DriftEMagboltz::DriftEl2Pad(float x0,float y0,float z0,float dE_kev,
 #endif
   //////////////////////////////////////////////////////////
   //determine delta_phi, 
-  float dphi_offset=GetdPhi_gem2pad(z0);
-  float dphi_s2gem1=GetdPhi_s2gem1(r0,z0);
-  float delta_phi = dphi_s2gem1 + dphi_offset;
+  double dphi_offset=GetdPhi_gem2pad(z0);
+  double dphi_s2gem1=GetdPhi_s2gem1(r0,z0);
+  double delta_phi = dphi_s2gem1 + dphi_offset;
 
 #ifdef DRIFTESIM_DEBUG
   if( DRIFTESIM_DEBUG>=3 )
@@ -381,7 +387,7 @@ int DriftEMagboltz::DriftEl2Pad(float x0,float y0,float z0,float dE_kev,
 #endif
   //check the output//////////////////////////////////////////////////////////
 
-  float phi_rad=float(phi0_rad-delta_phi);   //phi at pad pcb board
+  double phi_rad=phi0_rad-delta_phi;   //phi at pad pcb board
   //this is not the center of the pad yet!!!
   //convert the phi_deg into range [0,2*PI)
   if( phi_rad<0. )  phi_rad+=2.0*PI;
@@ -397,7 +403,7 @@ int DriftEMagboltz::DriftEl2Pad(float x0,float y0,float z0,float dE_kev,
 #ifdef DRIFTESIM_DEBUG
   if( DRIFTESIM_DEBUG>=2 )
   {
-    float z_pad_c,phi_pad_c;
+    double z_pad_c,phi_pad_c;
     GetChanZPhi(chan,z_pad_c,phi_pad_c);
     if(phi_pad_c<0) phi_pad_c+=2.0*PI;
     printf("DriftEl2Pad(): output: (r,phi_deg,z)=(80,%.1f,%.1f) phi_pad=%.1f, z_pad=%.1f, chan=%5d, tdc=%5d, adc=%5d\n",
@@ -408,7 +414,7 @@ int DriftEMagboltz::DriftEl2Pad(float x0,float y0,float z0,float dE_kev,
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
-void DriftEMagboltz::Reconstruct(int chan,int tdc_ns,float& x_r,float& y_r,float& z_r)
+void DriftEMagboltz::Reconstruct(int chan,int tdc_ns,double& x_r,double& y_r,double& z_r)
 {
   //input:  channel id and tdc (in ns unit, already include TPC_TZERO)
   //output: reconstruncted ionization location x_r,y_r,z_r (in mm)
@@ -419,13 +425,13 @@ void DriftEMagboltz::Reconstruct(int chan,int tdc_ns,float& x_r,float& y_r,float
     return;
   }
 
-  float z_mm=-210.0,phi_rad=-10.0;
+  double z_mm=-210.0,phi_rad=-10.0;
   GetChanZPhi(chan,z_mm,phi_rad);
 
   //reset the values
   x_r=0.;y_r=0.;z_r=0.;
-  float t_s2pad=tdc_ns-TPC_TZERO+0.5*NS_PER_TIC;
-  float s_r_mm, phi_r_rad;
+  double t_s2pad=tdc_ns-TPC_TZERO+0.5*NS_PER_TIC;
+  double s_r_mm, phi_r_rad;
   GetSPhi_r(z_mm, phi_rad, t_s2pad, s_r_mm, phi_r_rad);
 
   if(s_r_mm>0.0) 
@@ -462,7 +468,7 @@ void DriftEMagboltz::Reconstruct(int chan,int tdc_ns,float& x_r,float& y_r,float
 void DriftEMagboltz::InitElPathCell()
 {
   int chan, tdc, tic;
-  float x_r, y_r, z_r, r_r;
+  double x_r, y_r, z_r, r_r;
   printf("DriftEMagboltz::InitElPathCell(): Initializing reconstruction path cells......\n");
 
   for( chan = 0; chan<NUM_PADS; chan++ )
@@ -502,9 +508,9 @@ void DriftEMagboltz::InitElPathCell()
       fprintf(pFile,"\n  ID  TIC    x(mm)    y(mm)    z(mm)    r(mm) phi(deg)\n");
       for( tic=0;tic<NAL_SAMP;tic++ )
       {
-        float r_r=sqrt(rawXYZ[tic][chan].x*rawXYZ[tic][chan].x+
+        double r_r=sqrt(rawXYZ[tic][chan].x*rawXYZ[tic][chan].x+
           rawXYZ[tic][chan].y*rawXYZ[tic][chan].y);
-        float phi_deg=atan2(rawXYZ[tic][chan].y,rawXYZ[tic][chan].x)*rad2deg;
+        double phi_deg=atan2(rawXYZ[tic][chan].y,rawXYZ[tic][chan].x)*rad2deg;
         if(phi_deg<0.) phi_deg+=360.;
         fprintf(pFile,"%4d %4d %8.2f %8.2f %8.2f %8.2f %8.2f\n",
           chan,tic,
@@ -524,7 +530,7 @@ void DriftEMagboltz::InitElPathCell()
 //input: id and tdc_ns in ns unit
 //output: (x_r,y_r,z_r) from look up table
 void DriftEMagboltz::LookupXYZByIDTDC(int chan,int tdc_ns,
-  float& x_r,float& y_r,float& z_r)
+  double& x_r,double& y_r,double& z_r)
 {
   x_r=y_r=z_r=0.0;
   int tic = int((tdc_ns-TPC_TZERO)/NS_PER_TIC);
@@ -539,13 +545,13 @@ void DriftEMagboltz::LookupXYZByIDTDC(int chan,int tdc_ns,
 //input: (x0,y0,z0) in mm and deltaE in KeV
 //output: (x_r,y_r,z_r) and tdc in tic unit
 //        tdc = int((t_s2gem1+t_gem2pad+tzero)/NS_PER_TIC) * NS_PER_TIC 
-int DriftEMagboltz::DriftESim(float x0,float y0,float z0,float deltaE,
-  float& x_r,float& y_r,float& z_r, int& chan,int& tdc,int& adc)
+int DriftEMagboltz::DriftESim(double x0,double y0,double z0,double deltaE,
+  double& x_r,double& y_r,double& z_r, int& chan,int& tdc,int& adc)
 {
   //reset the values
   x_r=0.; y_r=0.; z_r=0.;  chan=-10;  tdc=-1;  adc=-1;
 
-  float s0=sqrt(x0*x0+y0*y0);	//x0,y0,z0 in mm unit
+  double s0=sqrt(x0*x0+y0*y0);	//x0,y0,z0 in mm unit
 
   if( s0>PAD_S-10.0 || fabs(z0) > RTPC_L/2.+PAD_L )
   {
@@ -564,7 +570,7 @@ int DriftEMagboltz::DriftESim(float x0,float y0,float z0,float deltaE,
 #ifdef DRIFTESIM_DEBUG
   if( DRIFTESIM_DEBUG>=1 )
   {
-    float phi0_rad=atan2(y0,x0);
+    double phi0_rad=atan2(y0,x0);
     if( phi0_rad<0. ) phi0_rad+=2.0*PI;
     printf("\nDriftESim(x0=%.2f,y0=%.2f,z0=%.2f)",x0,y0,z0);
     printf(" ==> (r0,phi0_deg,z0)=(%.2f,%.2f,%.2f)\n",s0, phi0_rad*rad2deg,z0);
@@ -586,7 +592,7 @@ int DriftEMagboltz::DriftESim(float x0,float y0,float z0,float deltaE,
 #if defined DRIFTESIM_DEBUG 
   if ( DRIFTESIM_DEBUG>=1 )  
   {
-    float phi0_rad, r_r, phi_r_rad, ds, dphi;
+    double phi0_rad, r_r, phi_r_rad, ds, dphi;
     phi0_rad=atan2(y0,x0);
     if( phi0_rad<0. ) phi0_rad+=2.0*PI;
 
@@ -615,8 +621,8 @@ int DriftEMagboltz::DriftESim(float x0,float y0,float z0,float deltaE,
 //and  TIC[1] = tic from the original reconstruction code
 //output: (x_r,y_r,z_r) and tdc in ns unit
 //        tdc = int((t_s2gem1+t_gem2pad+tzero)/NS_PER_TIC) * NS_PER_TIC 
-int DriftEMagboltz::DriftESim(float x0,float y0,float z0,float deltaE,int &NofTIC,
-  float *x_r,float* y_r,float* z_r,int* chan,int* tdc,int* adc)
+int DriftEMagboltz::DriftESim(double x0,double y0,double z0,double deltaE,int &NofTIC,
+  double *x_r,double* y_r,double* z_r,int* chan,int* tdc,int* adc)
 {
   //Suggested number of output tics for each ionization
   //the wave form is about 380 ns in total, width, only 4-sigma (or 2/3) above 
@@ -632,7 +638,7 @@ int DriftEMagboltz::DriftESim(float x0,float y0,float z0,float deltaE,int &NofTI
     x_r[t]=y_r[t]=z_r[t]=0.; 
   }
 
-  float s0=sqrt(x0*x0+y0*y0);	//x0,y0,z0 in mm unit
+  double s0=sqrt(x0*x0+y0*y0);	//x0,y0,z0 in mm unit
 
   if( s0>PAD_S-10.0 || fabs(z0) > RTPC_L/2.+PAD_L )
   {
@@ -652,7 +658,7 @@ int DriftEMagboltz::DriftESim(float x0,float y0,float z0,float deltaE,int &NofTI
 #ifdef DRIFTESIM_DEBUG
   if( DRIFTESIM_DEBUG>=1 )
   {
-    float phi0_rad=atan2(y0,x0);
+    double phi0_rad=atan2(y0,x0);
     if( phi0_rad<0. ) phi0_rad+=2.0*PI;
     printf("\nDriftESim(x0=%.2f,y0=%.2f,z0=%.2f)",x0,y0,z0);
     printf(" ==> (r0,phi0_deg,z0)=(%.2f,%.2f,%.2f)\n",s0, phi0_rad*rad2deg,z0);
@@ -705,8 +711,8 @@ int DriftEMagboltz::DriftESim(float x0,float y0,float z0,float deltaE,int &NofTI
 #if defined DRIFTESIM_DEBUG 
   if ( DRIFTESIM_DEBUG>=1 )  
   {
-    float r_r, phi_r_rad, ds, dphi;
-    float phi0_rad = atan2(y0,x0);
+    double r_r, phi_r_rad, ds, dphi;
+    double phi0_rad = atan2(y0,x0);
     if( phi0_rad<0. ) phi0_rad+=2.0*PI;
     printf("DriftESim(Jixie)==>Final output: %d points:\n",NofTIC);
     for(int t=0;t<NofTIC;t++) 

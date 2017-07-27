@@ -17,7 +17,9 @@ class ChannelMap
 public:
   //providing pad width(phi), length(z), inner_s, phi at center of the 
   //bottom edge of the connector connected to channel 0
-	ChannelMap(double pad_w=2.7381, double pad_l=4.1016, double pad_r_in=79.0, 
+  //ChannelMap* fChanMap = new ChannelMap(2.7381,4.1016,79.00,0);
+  //ChannelMap* fChanMap = new ChannelMap(2.8016,4.1016,80.42,0);
+	ChannelMap(double pad_w=2.8016, double pad_l=4.1016, double pad_r_in=80.42, 
              double phi_conn_edge=0.);
 	virtual ~ChannelMap();
 

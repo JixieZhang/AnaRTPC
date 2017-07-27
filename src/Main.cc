@@ -9,9 +9,7 @@
 using namespace std;
 
 #include "MyStyle.h"
-
 #include "MulDFit.h"
-#include "ChannelMap.hh"
 
 void AnaRTPC(const char *infile,const char *outfile="", int readoutpad=2, int ntrack_per_event=1);
 
@@ -24,9 +22,6 @@ void Calib(const char* infile="nt_ep.root");
 
 int main(int argc, char** argv)
 {
-ChannelMap *pChanMap=new ChannelMap();
-delete pChanMap;
-
   if (argc<3) 
   {
     cout<<endl;
@@ -34,11 +29,13 @@ delete pChanMap;
     cout<<"       exe <job(20-29)> [in_para=in_para.ini] [in_file=in_file.dat]"<<endl;
     cout<<"\nFor 10<=job<=19 or job==99:"<<endl;
     cout<<"       exe <job(10-19)> <infile=nt.root> [outfile=nt_ep.root] [readoutpad=6(1|2|3|4|5|6)] [ntrack_per_event=1]"<<endl;
-    cout<<"       readoutpad: 1)4.5x5,  2)2x2,  3)compass 2-D readout, 0.4x0.4 equivalent"<<endl;
-    cout<<"       4)compass 2-D readout, 1.0x1.0 equivalent, 5cm drift distance,"<<endl;
-    cout<<"       5)compass 2-D readout, 1.0x1.0 equivalent, 4cm drift distance, "<<endl;
-    cout<<"       6)Final Configuration: 2.8x4 pad and 4cm drift distance."<<endl;
-    cout<<"       ntrack_per_event is how many track in each super event. 1 means no no super evnet \\ \n"
+    cout<<"       readoutpad: 1)4.5x5 mm, 5cm drift distance,"<<endl;
+    cout<<"       2)TDIS: 2.0x2.0 mm, drift region is 5cm-15cm,"<<endl;
+    cout<<"       3)compass 2-D readout, 0.4x0.4 mm equivalent, 5cm drift distance,"<<endl;
+    cout<<"       4)compass 2-D readout, 1.0x1.0 mm equivalent, 5cm drift distance,"<<endl;
+    cout<<"       5)compass 2-D readout, 1.0x1.0 mm equivalent, 4cm drift distance, "<<endl;
+    cout<<"       6)RTPC12: 2.8016x4.1016 mm pad and 4cm drift distance."<<endl;
+    cout<<"       ntrack_per_event is how many track in each super event. 1 means no super evnet \\ \n"
         <<"       therefore no TDC shfited."<<endl;
     cout<<"       job=11  AnaRTPC, will create tree and files for MulDFit"<<endl;
     cout<<"       job=12  Get RTPC Calibration input file RTPC_Calib_Para.inc"<<endl;
